@@ -7,9 +7,14 @@
     "activeTab",
     "storage"
   ],
+	"background" : {
+		"service_worker": "./src/background.js",
+		"persistent": false
+	},
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*"],
+			"css": ["./src/styles/ytstyle.css"],
       "js": ["./src/index.js"]
     }
   ]
