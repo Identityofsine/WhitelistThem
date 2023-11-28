@@ -37,10 +37,12 @@ class Channel extends Identifiable {
 
 class Video extends Identifiable {
 	isShort = false;
+	dom = null;
 
-	constructor(id, name, isShort) {
+	constructor(id, name, isShort, dom) {
 		super(id, name);
 		this.isShort = isShort;
+		this.dom = dom;
 	}
 }
 
@@ -57,8 +59,8 @@ const YoutubeSettings = {
 	generic: {
 		yt_video: {
 			channel: {
-				tag: "a",
-				id: "avatar-link"
+				tag: "ytd-channel-name",
+				id: { tag: "a" }
 			},
 			title: {
 				tag: "a",
@@ -149,17 +151,18 @@ class VideoFactroy {
 		}
 
 		function getChannelName() {
-			const anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
-			for (let i = 0; i < anchor_tags.length; i++) {
-				const anchor = anchor_tags[i];
-				if (anchor.id === YoutubeSettings.generic.yt_video.channel.id) {
-					return anchor.innerText;
+			const channel_tag = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
+			for (let i = 0; i < channel_tag.length; i++) {
+				const search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
+				if (search) {
+					return { name: search.innerText, id: search.href };
 				}
+
 			}
-			return '';
+			return { name: '', id: '' };
 		}
 
-		return { video: new Video(getTitleAndID().id, getTitleAndID().title, false), channelname: getChannelName() };
+		return { video: new Video(getTitleAndID().id, getTitleAndID().title, false, video_dom), channelname: getChannelName() };
 
 	}
 }
@@ -172,8 +175,40 @@ async function sleep(callback, timeout) {
 	});
 }
 
-class ChromeExtension {
+class ChannelCache {
 	channels = []; //Channel
+
+	constructor() {
+	}
+
+	get channels() {
+		return this.channel;
+	}
+
+	doesChannelExist(channel) {
+		if (channel instanceof Channel) {
+			return this.channels.find(c => c.compare(channel));
+		}
+		return false;
+	}
+
+	//methods
+	addChannel(channel) {
+		if (channel instanceof Channel) {
+			const _channel = this.doesChannelExist(channel);
+			if (!this.doesChannelExist(channel)) {
+				this.channels.push(channel);
+				return channel;
+			} else {
+				return _channel;
+			}
+		}
+
+	}
+}
+
+class ChromeExtension {
+	channels = new ChannelCache();
 	allowed_channels = []; //string
 	static page_instance = new PageHandler();
 
@@ -199,17 +234,19 @@ class ChromeExtension {
 	async search() {
 
 
-		function _grabVideos() {
+		const _grabVideos = () => {
 			const containers = document.getElementsByTagName(YoutubeSettings.home.container);
 			for (let i = 0; i < containers.length; i++) {
 				const videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
 					const videof_obj = VideoFactroy.createVideo(video_dom);
-					//console.log(videof_obj);
-
+					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
+					if (_channel)
+						_channel.addVideo(videof_obj.video);
 				}
 			}
+			console.log(this.channels.channels);
 		}
 
 		ChromeExtension.page_instance.onVideoRefresh = _grabVideos;
