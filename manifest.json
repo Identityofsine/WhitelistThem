@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Whitelist",
   "version": "1.0",
   "description": "Cater your YouTube experience to what you need.",
@@ -7,11 +7,6 @@
     "activeTab",
     "storage"
   ],
-  "browser_action": {
-    //"default_icon": "icon.png",
-    //"default_popup": "popup.html",
-    //"default_title": "YouTube Modifier"
-  },
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*"],
