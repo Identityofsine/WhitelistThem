@@ -87,8 +87,10 @@ class Video extends Identifiable {
 
 	disable() {
 		if (this.disabled) return;
-		if (ChromeExtension.enabled)
-			this.dom.style.display = "none";
+		if (ChromeExtension.enabled) {
+			//delete element
+			this.dom.remove();
+		}
 
 		this.changeInjectionState(true);
 		this.disabled = true;
@@ -96,8 +98,10 @@ class Video extends Identifiable {
 
 	enable() {
 		if (!this.disabled) return;
-		if (ChromeExtension.enabled)
-			this.dom.style.display = "block";
+		if (ChromeExtension.enabled) {
+			//add element
+			this.dom.parentElement.appendChild(this.dom);
+		}
 
 		this.changeInjectionState(false);
 		this.disabled = false;
@@ -157,6 +161,7 @@ const YoutubeSettings = {
 	video: {
 		container: "ytd-watch-next-secondary-results-renderer",
 		yt_video: "ytd-compact-video-renderer",
+		yt_circle: "ytd-continuation-item-renderer",
 		yt_video_link: {
 			tag: "a",
 			class: "yt-simple-endpoint style-scope ytd-compact-video-renderer"
@@ -423,7 +428,7 @@ class ChromeExtension {
 	channels = new ChannelCache();
 	static allowed_channels = []; //string
 	static page_instance = new PageHandler();
-	static enabled = false;
+	static enabled = true;
 	searching = false;
 	started = false;
 
@@ -486,6 +491,13 @@ class ChromeExtension {
 				}
 				else {
 					videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
+					//delete all circles 
+					const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
+					for (let i = 0; i < circles.length; i++) {
+						const circle = circles[i];
+						circle.style.display = "none";
+					}
+
 				}
 
 				getContainers();
@@ -496,12 +508,20 @@ class ChromeExtension {
 					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
 					if (_channel)
 						_channel.addVideo(videof_obj.video);
-					console.log(this.channels.channels);
 				}
 			}
 		}
 
 		ChromeExtension.page_instance.onVideoRefresh = _grabVideos;
+	}
+
+	async clearCacheRoutine() {
+		while (true) {
+			await sleep(() => {
+				this.clearCache();
+			}, 1000 * 10);
+
+		}
 	}
 
 	async disableVideos() {
@@ -545,6 +565,7 @@ async function inject(...args) {
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
+	ce.clearCacheRoutine();
 
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
