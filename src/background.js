@@ -73,6 +73,8 @@ function determinePageType(url) {
 			return 'home';
 		} else if (path.startsWith('/watch')) {
 			return 'video';
+		} else if (path.startsWith('/@')) {
+			return 'channel';
 		}
 	}
 
