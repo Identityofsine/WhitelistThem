@@ -33,7 +33,7 @@ class Channel extends Identifiable {
 			if (_video) {
 				return _video;
 			} else {
-				video.inject();
+				video.inject(this.name);
 				this.videos.push(video);
 				return video;
 			}
@@ -75,10 +75,13 @@ class Video extends Identifiable {
 		this.disabled = false;
 	}
 
-	inject() {
+	inject(channel_name) {
 		const element = document.createElement("div");
 		element.innerHTML = `<h2>+</h2>`
 		element.id = "whitelist-spot";
+		element.onclick = () => {
+			MessageHandler.addChannel(channel_name);
+		}
 		this.dom.appendChild(element);
 	}
 
@@ -113,6 +116,24 @@ const YoutubeSettings = {
 }
 
 
+//communicate with service workers
+class MessageHandler {
+	static send(message, callback) {
+		chrome.runtime.sendMessage(message, callback);
+	}
+
+	static addChannel(channel) {
+		this.send({ type: "add-channel", channel: channel });
+	}
+
+	static onMessage(callback) {
+		chrome.runtime.onMessage.addListener(callback);
+	}
+
+}
+
+
+
 //check if page is still loading
 
 class PageHandler {
@@ -124,12 +145,11 @@ class PageHandler {
 
 	constructor() {
 		this.pageLoaded();
-		this.linkCSS("src/styles/ytstyles.css")
 	}
 
 	linkCSS(path) {
 		const link = document.createElement("link");
-		link.href = chrome.extension.getURL(path);
+		link.href = chrome.runtime.getURL(path);
 		link.type = "text/css";
 		link.rel = "stylesheet";
 		document.getElementsByTagName("head")[0].appendChild(link);
@@ -263,9 +283,11 @@ class ChromeExtension {
 	allowed_channels = []; //string
 	static page_instance = new PageHandler();
 	searching = false;
+	started = false;
 
 	constructor(allowed_channels) {
 		this.allowed_channels = allowed_channels;
+		this.start();
 	}
 
 	get channels() {
@@ -274,6 +296,14 @@ class ChromeExtension {
 
 	get allowed_channels() {
 		return this.allowed_channels;
+	}
+
+	async start() {
+		MessageHandler.send({ type: "get-channels" }, (response) => {
+			if (response.type === "query-channels") {
+				this.allowed_channels = response.channels;
+			}
+		});
 	}
 
 	async deleteShorts() {
@@ -317,12 +347,10 @@ class ChromeExtension {
 
 	async disableVideos() {
 		const banned_channels = this.channels.channels.filter(channel => !this.allowed_channels.includes(channel.name));
-		console.log(this.allowed_channels);
 		for (let i = 0; i < banned_channels.length; i++) {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
 				if (channel.videos[z].disabled) continue;
-				console.log("Disabling video %s - from %s", channel.videos[z].name, channel.name);
 				const video = channel.videos[z];
 				video.disable();
 			}
@@ -337,7 +365,7 @@ class ChromeExtension {
 
 //used by the background script
 async function inject(...args) {
-	const ce = new ChromeExtension(["Fireship", "MilleniaThinker", "Hamza Ahmed", "1M", "1STMAN", "PUMAZ", "Kaal Raam", "SomeOrdinaryGamers", "TSoding", ""]);
+	const ce = new ChromeExtension([]);
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();

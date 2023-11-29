@@ -1,7 +1,22 @@
 #whitelist-spot {
 	position: absolute;
-	top: 0;
-	right: 0;
+	top: -2em;
+  right: -1em;
+	z-index: 9999;
+}
+
+#whitelist-spot h2 {
+	/* check color scheme */	
+	color: #fff;
+	font-size: 5em;
+	font-weight: bold;
+	user-select: none;
+	pointer-events: all;
+	cursor: crosshair;
+	/* text-stroke */
+	-webkit-text-stroke: .05em #000;
+
+
 }
 
 
