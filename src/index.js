@@ -454,7 +454,7 @@ class ChromeExtension {
 	channels = new ChannelCache();
 	static allowed_channels = []; //string
 	static page_instance = new PageHandler();
-	static enabled = false;
+	static enabled = true;
 	searching = false;
 	started = false;
 
@@ -482,10 +482,14 @@ class ChromeExtension {
 	static generateToggleDiv() {
 		const div = document.createElement("div");
 		div.id = "wt-toggle";
-		if (ChromeExtension.enabled)
+
+		if (ChromeExtension.enabled) {
 			div.innerHTML = `<h2>Enabled</h2>`;
-		else
+		}
+		else {
 			div.innerHTML = `<h2>Disabled</h2>`;
+		}
+
 		div.onclick = () => {
 			ChromeExtension.enabled = !ChromeExtension.enabled;
 			if (ChromeExtension.enabled) {
@@ -594,12 +598,9 @@ class ChromeExtension {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
 				const video = channel.videos[z];
-				if (ChromeExtension.enabled) {
-					if (video.disabled) continue;
-					video.disable();
-				} else {
-					video.refresh();
-				}
+				video.refresh();
+				if (video.disabled) continue;
+				video.disable();
 			}
 		}
 	}
