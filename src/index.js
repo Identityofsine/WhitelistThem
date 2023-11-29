@@ -482,7 +482,10 @@ class ChromeExtension {
 	static generateToggleDiv() {
 		const div = document.createElement("div");
 		div.id = "wt-toggle";
-		div.innerHTML = `<h2>Toggle</h2>`;
+		if (ChromeExtension.enabled)
+			div.innerHTML = `<h2>Enabled</h2>`;
+		else
+			div.innerHTML = `<h2>Disabled</h2>`;
 		div.onclick = () => {
 			ChromeExtension.enabled = !ChromeExtension.enabled;
 			if (ChromeExtension.enabled) {

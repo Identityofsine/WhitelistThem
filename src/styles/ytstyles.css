@@ -18,8 +18,11 @@
 	cursor: crosshair;
 	/* text-stroke */
 	-webkit-text-stroke: .05em #000;
+}
 
-
+#wt-toggle {
+	background: #fff;
+	padding: .5em;
 }
 
 
