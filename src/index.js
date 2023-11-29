@@ -1,14 +1,27 @@
 class Identifiable {
+	uuid = "";
 	id = "";
 	name = "";
 
 	constructor(id, name) {
+		this.uuid = Identifiable.generateUUID();
 		this.id = id;
 		this.name = name;
 	}
 
+	static generateUUID() {
+		const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+			return (c === "x" ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0) & 0x3 | 0x8).toString(16);
+		});
+		return uuid;
+	}
+
 	compare(other) {
 		return this.id === other.id;
+	}
+
+	compareUUID(other) {
+		return this.uuid === other.uuid;
 	}
 
 }
@@ -22,7 +35,8 @@ class Channel extends Identifiable {
 
 	doesVideoExist(video) {
 		if (video instanceof Video) {
-			return this.videos.find(v => v.compare(video));
+			const first_search = this.videos.find(v => v.compare(video));
+			if (first_search) return first_search;
 		}
 		return false;
 	}
@@ -31,12 +45,11 @@ class Channel extends Identifiable {
 		if (video instanceof Video) {
 			const _video = this.doesVideoExist(video);
 			if (_video) {
-				return _video;
-			} else {
-				video.inject(this);
-				this.videos.push(video);
-				return video;
+				this.removeVideo(_video);
 			}
+			video.inject(this);
+			this.videos.push(video);
+			return video;
 		}
 		else return false;
 	}
@@ -151,8 +164,9 @@ const YoutubeSettings = {
 			tag: "yt-formatted-string",
 			id: "channel-name",
 			link: {
+				container: "dismissible",
 				tag: "a",
-				id: "title"
+				class: "yt-simple-endpoint style-scope ytd-compact-video-renderer"
 			}
 		}
 	},
@@ -206,16 +220,9 @@ class PageHandler {
 	constructor() {
 		this.getPage().then((page) => {
 			this.page = page;
+			console.log("Page: ", this.page);
 			this.pageLoaded();
 		});
-	}
-
-	linkCSS(path) {
-		const link = document.createElement("link");
-		link.href = chrome.runtime.getURL(path);
-		link.type = "text/css";
-		link.rel = "stylesheet";
-		document.getElementsByTagName("head")[0].appendChild(link);
 	}
 
 	isPageLoading() {
@@ -232,12 +239,23 @@ class PageHandler {
 		return video.length > 0;
 	}
 
+	refreshPage(callback = () => { }) {
+		this.getPage().then((page) => {
+			if (this.page !== page) {
+				this.page_loaded = false;
+				this.page = page;
+				this.pageLoaded();
+			}
+			callback();
+		});
+	}
+
 	async engine() {
 		while (this.page_loaded) {
 			this._onVideoRefresh.forEach(async (callback) => {
 				callback();
 			});
-			await sleep(() => { }, 500);
+			await sleep(() => { }, 1000);
 		}
 	}
 
@@ -277,7 +295,7 @@ class PageHandler {
 
 }
 
-class VideoFactroy {
+class VideoFactory {
 	static createVideo(video_dom) {
 
 		function extractVideoId(url) {
@@ -324,7 +342,17 @@ class VideoFactroy {
 				if (is_home)
 					search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
 				else {
+					const link_container = video_dom.querySelector("#" + YoutubeSettings.video.channel.link.container);
+					let link_anchor = link_container.getElementsByTagName(YoutubeSettings.video.channel.link.tag);
+					let link = "";
+					for (let i = 0; i < link_anchor.length; i++) {
+						if (link_anchor[i].className === YoutubeSettings.video.channel.link.class) {
+							link = link_anchor[i];
+							break;
+						}
+					}
 
+					search = { innerText: channel_tag[i]?.title, href: link.href };
 				}
 
 
@@ -333,7 +361,6 @@ class VideoFactroy {
 				}
 
 			}
-
 			return { name: '', id: '' };
 
 		}
@@ -379,7 +406,10 @@ class ChannelCache {
 				return _channel;
 			}
 		}
+	}
 
+	clearCache() {
+		this.channels = [];
 	}
 }
 
@@ -432,28 +462,35 @@ class ChromeExtension {
 
 		const _grabVideos = async () => {
 
-			const is_home = ChromeExtension.page_instance.page === "home";
+			const getContainers = () => {
+				if (is_home) {
+					return document.getElementsByTagName(YoutubeSettings.home.container);
+				} else {
+					return document.getElementsByTagName(YoutubeSettings.video.container);
+				}
+			}
 
-			let containers;
-			if (is_home)
-				containers = document.getElementsByTagName(YoutubeSettings.home.container);
-			else
-				containers = document.getElementsByTagName(YoutubeSettings.video.container);
+			const is_home = ChromeExtension.page_instance.page === "home";
+			let containers = getContainers();
 
 			for (let i = 0; i < containers.length; i++) {
 				let videos;
-				if (is_home)
+				if (is_home) {
 					videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
-				else
+				}
+				else {
 					videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
+				}
 
+				getContainers();
 
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
-					const videof_obj = VideoFactroy.createVideo(video_dom);
+					const videof_obj = VideoFactory.createVideo(video_dom);
 					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
 					if (_channel)
 						_channel.addVideo(videof_obj.video);
+					console.log(this.channels.channels);
 				}
 			}
 		}
@@ -466,8 +503,8 @@ class ChromeExtension {
 		for (let i = 0; i < banned_channels.length; i++) {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
-				if (channel.videos[z].disabled) continue;
 				const video = channel.videos[z];
+				if (video.disabled) continue;
 				video.disable();
 			}
 		}
@@ -475,6 +512,10 @@ class ChromeExtension {
 
 	startVideoDisableLoop() {
 		ChromeExtension.page_instance.onVideoRefresh = this.disableVideos.bind(this);
+	}
+
+	clearCache() {
+		this.channels.clearCache();
 	}
 
 	static addAllowedChannel(channel_name) {
@@ -498,6 +539,15 @@ async function inject(...args) {
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
+
+	//run chrome listener on update, and check the page
+	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+		if (request.type === "update") {
+			ce.clearCache();
+			ChromeExtension.page_instance.refreshPage(() => {
+			});
+		}
+	});
 }
 
 inject();

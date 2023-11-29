@@ -80,6 +80,17 @@ function determinePageType(url) {
 	return 'unknown';
 }
 
+
+//send message to content script to refresh -- called when site is changed or updated
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+	if (changeInfo.status === "complete") {
+		chrome.tabs.sendMessage(tab.id, { type: "update" });
+	}
+});
+
+
+
+
 //recieve message from content script
 chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "add-channel") {
