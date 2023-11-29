@@ -85,6 +85,17 @@ class Video extends Identifiable {
 		}
 	}
 
+	refresh() {
+		if (ChromeExtension.enabled) {
+			if (this.disabled) {
+				this.dom.style.display = "none";
+			} else {
+				this.dom.style.display = "block";
+			}
+		};
+		this.dom.style.display = "block";
+	}
+
 	disable() {
 		if (this.disabled) return;
 		if (ChromeExtension.enabled) {
@@ -470,7 +481,7 @@ class ChromeExtension {
 
 	static generateToggleDiv() {
 		const div = document.createElement("div");
-		div.id = "toggle";
+		div.id = "wt-toggle";
 		div.innerHTML = `<h2>Toggle</h2>`;
 		div.onclick = () => {
 			ChromeExtension.enabled = !ChromeExtension.enabled;
@@ -492,6 +503,12 @@ class ChromeExtension {
 		if (!buttons_container || !injection_spot) return;
 		const toggle_div = ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
+		ChromeExtension.page_instance.onVideoRefresh = () => {
+			const toggle_div = document.getElementById("wt-toggle");
+			if (toggle_div) return;
+			const toggle_div_new = ChromeExtension.generateToggleDiv();
+			injection_spot.appendChild(toggle_div_new);
+		}
 	}
 
 	async deleteShorts() {
@@ -574,8 +591,13 @@ class ChromeExtension {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
 				const video = channel.videos[z];
-				if (video.disabled) continue;
-				video.disable();
+				if (ChromeExtension.enabled) {
+					if (video.disabled) continue;
+					video.disable();
+				} else {
+					if (!video.disabled) continue;
+					video.enable();
+				}
 			}
 		}
 	}
