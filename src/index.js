@@ -595,8 +595,7 @@ class ChromeExtension {
 					if (video.disabled) continue;
 					video.disable();
 				} else {
-					if (!video.disabled) continue;
-					video.enable();
+					video.refresh();
 				}
 			}
 		}
