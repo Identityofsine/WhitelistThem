@@ -319,7 +319,7 @@ class PageHandler {
 	/**
 	 * @param {Function} callback The callback to be called when a video is refreshed
 	 */
-	set onVideoRefresh(callback) {
+	set onVideoRefresh(callback = (_page) => { }) {
 		this._onVideoRefresh.push(callback);
 	}
 
