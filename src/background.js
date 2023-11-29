@@ -77,7 +77,7 @@ function determinePageType(url) {
 	}
 
 	// If the URL doesn't match the expected patterns
-	return 'unknown';
+	return 'home';
 }
 
 

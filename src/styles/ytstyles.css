@@ -1,7 +1,7 @@
 #whitelist-spot {
 	position: absolute;
 	top: -2em;
-  right: -1em;
+  left: 1em;
 	z-index: 2;
 	width: fit-content;
 	height: fit-content;

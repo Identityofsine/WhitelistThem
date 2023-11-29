@@ -87,7 +87,7 @@ class Video extends Identifiable {
 
 	disable() {
 		if (this.disabled) return;
-		if (!ChromeExtension.enabled)
+		if (ChromeExtension.enabled)
 			this.dom.style.display = "none";
 
 		this.changeInjectionState(true);
@@ -96,7 +96,7 @@ class Video extends Identifiable {
 
 	enable() {
 		if (!this.disabled) return;
-		if (!ChromeExtension.enabled)
+		if (ChromeExtension.enabled)
 			this.dom.style.display = "block";
 
 		this.changeInjectionState(false);
@@ -107,6 +107,11 @@ class Video extends Identifiable {
 	 * @param {Channel} channel
 	 */
 	inject(channel) {
+		if (this.dom.dataset.whitelisted) {
+			this.injected = true;
+			return;
+		}
+
 		const element = document.createElement("div");
 
 		if (!this.disabled)
@@ -130,6 +135,7 @@ class Video extends Identifiable {
 
 		element.onclick = onclick_function.bind(this);
 		this.dom.appendChild(element);
+		this.dom.dataset.whitelisted = true;
 	}
 
 }
