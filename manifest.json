@@ -4,6 +4,7 @@
   "version": "1.0",
   "description": "Cater your YouTube experience to what you need.",
   "permissions": [
+		"tabs",
     "activeTab",
     "storage"
   ],

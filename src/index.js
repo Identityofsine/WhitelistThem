@@ -33,7 +33,7 @@ class Channel extends Identifiable {
 			if (_video) {
 				return _video;
 			} else {
-				video.inject(this.name);
+				video.inject(this);
 				this.videos.push(video);
 				return video;
 			}
@@ -54,6 +54,7 @@ class Video extends Identifiable {
 	isShort = false;
 	dom = null;
 	disabled = false;
+	injected = false;
 
 	constructor(id, name, isShort, dom) {
 		super(id, name);
@@ -61,27 +62,60 @@ class Video extends Identifiable {
 		this.dom = dom;
 	}
 
+	changeInjectionState(plus) {
+		if (!this.dom) return;
+		const element = this.dom.querySelector("#whitelist-spot");
+		if (plus) {
+			element.innerHTML = `<h2>+</h2>`;
+		} else {
+			element.innerHTML = `<h2>-</h2>`;
+		}
+	}
+
 	disable() {
 		if (this.disabled) return;
-		this.dom.style.display = "none";
+		if (!ChromeExtension.enabled)
+			this.dom.style.display = "none";
 
+		this.changeInjectionState(true);
 		this.disabled = true;
 	}
 
 	enable() {
 		if (!this.disabled) return;
-		this.dom.style.display = "block";
+		if (!ChromeExtension.enabled)
+			this.dom.style.display = "block";
 
+		this.changeInjectionState(false);
 		this.disabled = false;
 	}
 
-	inject(channel_name) {
+	/**
+	 * @param {Channel} channel
+	 */
+	inject(channel) {
 		const element = document.createElement("div");
-		element.innerHTML = `<h2>+</h2>`
+
+		if (!this.disabled)
+			element.innerHTML = `<h2>-</h2>`;
+		else
+			element.innerHTML = `<h2>+</h2>`
+
 		element.id = "whitelist-spot";
-		element.onclick = () => {
-			MessageHandler.addChannel(channel_name);
-		}
+
+		const onclick_function = () => {
+			if (this.disabled) {
+				MessageHandler.addChannel(channel.name);
+				ChromeExtension.addAllowedChannel(channel.name);
+				this.enable();
+			} else {
+				MessageHandler.removeChannel(channel.name);
+				ChromeExtension.removeAllowedChannel(channel.name);
+				this.disable();
+			}
+		};
+
+		element.onclick = onclick_function.bind(this);
 		this.dom.appendChild(element);
 	}
 
@@ -99,6 +133,27 @@ const YoutubeSettings = {
 		shorts: {
 			tag: "ytd-rich-section-renderer",
 			class: "style-scope ytd-rich-grid-renderer"
+		}
+	},
+	video: {
+		container: "ytd-watch-next-secondary-results-renderer",
+		yt_video: "ytd-compact-video-renderer",
+		yt_video_link: {
+			tag: "a",
+			class: "yt-simple-endpoint style-scope ytd-compact-video-renderer"
+		},
+		yt_video_title: {
+			tag: "span",
+			id: "video-title"
+		},
+		channel: {
+			container: "ytd-channel-name",
+			tag: "yt-formatted-string",
+			id: "channel-name",
+			link: {
+				tag: "a",
+				id: "title"
+			}
 		}
 	},
 	generic: {
@@ -126,6 +181,10 @@ class MessageHandler {
 		this.send({ type: "add-channel", channel: channel });
 	}
 
+	static removeChannel(channel) {
+		this.send({ type: "remove-channel", channel: channel });
+	}
+
 	static onMessage(callback) {
 		chrome.runtime.onMessage.addListener(callback);
 	}
@@ -139,12 +198,16 @@ class MessageHandler {
 class PageHandler {
 	init = false;
 	page_loaded = false;
+	page = "home";
 	_onVideoRefresh = [];
 	_onPageLoad = [];
 
 
 	constructor() {
-		this.pageLoaded();
+		this.getPage().then((page) => {
+			this.page = page;
+			this.pageLoaded();
+		});
 	}
 
 	linkCSS(path) {
@@ -161,7 +224,11 @@ class PageHandler {
 
 	isVideoOnPage() {
 		//check where we are
-		const video = document.getElementsByTagName(YoutubeSettings.home.yt_video);
+		let video;
+		if (this.page === "home")
+			video = document.getElementsByTagName(YoutubeSettings.home.yt_video);
+		else
+			video = document.getElementsByTagName(YoutubeSettings.video.yt_video);
 		return video.length > 0;
 	}
 
@@ -183,6 +250,14 @@ class PageHandler {
 			callback();
 		});
 		this.engine();
+	}
+
+	async getPage() {
+		return new Promise((resolve, _reject) => {
+			chrome.runtime.sendMessage({ type: "get-page" }, (response) => {
+				resolve(response.page);
+			});
+		});
 	}
 
 
@@ -211,26 +286,56 @@ class VideoFactroy {
 		}
 
 		function getTitleAndID() {
-			const anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.home.yt_video_title.tag);
+			const is_home = ChromeExtension.page_instance.page === "home";
+			let anchor_tags;
+			if (is_home) {
+				anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.home.yt_video_title.tag);
+			} else {
+				anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_title.tag);
+			}
+
 			for (let i = 0; i < anchor_tags.length; i++) {
 				const anchor = anchor_tags[i];
-				if (anchor.id === YoutubeSettings.home.yt_video_title.id) {
-					return { title: anchor.innerText, id: extractVideoId(anchor.href) };
+				if (is_home) {
+					if (anchor.id === YoutubeSettings.home.yt_video_title.id) {
+						return { title: anchor.innerText, id: extractVideoId(anchor.href) };
+					}
+				} else {
+					if (anchor.id === YoutubeSettings.video.yt_video_title.id) {
+						const href = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_link.tag)[0].href;
+						return { title: anchor.innerText, id: extractVideoId(href) };
+					}
 				}
 			}
 			return { title: '', id: '' };
 		}
 
 		function getChannelName() {
-			const channel_tag = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
+			const is_home = ChromeExtension.page_instance.page === "home";
+
+			let channel_tag;
+			if (is_home) {
+				channel_tag = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
+			} else {
+				channel_tag = video_dom.getElementsByTagName(YoutubeSettings.video.channel.tag);
+			}
 			for (let i = 0; i < channel_tag.length; i++) {
-				const search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
+				let search;
+				if (is_home)
+					search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
+				else {
+
+				}
+
+
 				if (search) {
 					return { name: search.innerText, id: search.href };
 				}
 
 			}
+
 			return { name: '', id: '' };
+
 		}
 
 		return { video: new Video(getTitleAndID().id, getTitleAndID().title, false, video_dom), channelname: getChannelName() };
@@ -280,13 +385,14 @@ class ChannelCache {
 
 class ChromeExtension {
 	channels = new ChannelCache();
-	allowed_channels = []; //string
+	static allowed_channels = []; //string
 	static page_instance = new PageHandler();
+	static enabled = false;
 	searching = false;
 	started = false;
 
 	constructor(allowed_channels) {
-		this.allowed_channels = allowed_channels;
+		ChromeExtension.allowed_channels = allowed_channels;
 		this.start();
 	}
 
@@ -294,14 +400,10 @@ class ChromeExtension {
 		return this.channel;
 	}
 
-	get allowed_channels() {
-		return this.allowed_channels;
-	}
-
 	async start() {
 		MessageHandler.send({ type: "get-channels" }, (response) => {
 			if (response.type === "query-channels") {
-				this.allowed_channels = response.channels;
+				ChromeExtension.allowed_channels = response.channels;
 			}
 		});
 	}
@@ -321,7 +423,7 @@ class ChromeExtension {
 
 	/**
 	* @description Searches the current page for any video elements adds them into the array 
-	* @returns Nothing(void)
+		 @returns Nothing(void)
 	*/
 	async search() {
 
@@ -329,9 +431,23 @@ class ChromeExtension {
 		this.searching = true;
 
 		const _grabVideos = async () => {
-			const containers = document.getElementsByTagName(YoutubeSettings.home.container);
+
+			const is_home = ChromeExtension.page_instance.page === "home";
+
+			let containers;
+			if (is_home)
+				containers = document.getElementsByTagName(YoutubeSettings.home.container);
+			else
+				containers = document.getElementsByTagName(YoutubeSettings.video.container);
+
 			for (let i = 0; i < containers.length; i++) {
-				const videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
+				let videos;
+				if (is_home)
+					videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
+				else
+					videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
+
+
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
 					const videof_obj = VideoFactroy.createVideo(video_dom);
@@ -346,7 +462,7 @@ class ChromeExtension {
 	}
 
 	async disableVideos() {
-		const banned_channels = this.channels.channels.filter(channel => !this.allowed_channels.includes(channel.name));
+		let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
 		for (let i = 0; i < banned_channels.length; i++) {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
@@ -360,6 +476,19 @@ class ChromeExtension {
 	startVideoDisableLoop() {
 		ChromeExtension.page_instance.onVideoRefresh = this.disableVideos.bind(this);
 	}
+
+	static addAllowedChannel(channel_name) {
+		if (!ChromeExtension.allowed_channels.includes(channel_name)) {
+			ChromeExtension.allowed_channels.push(channel_name);
+		}
+	}
+
+	static removeAllowedChannel(channel_name) {
+		if (ChromeExtension.allowed_channels.includes(channel_name)) {
+			ChromeExtension.allowed_channels.splice(ChromeExtension.allowed_channels.indexOf(channel_name), 1);
+		}
+	}
+
 }
 
 
