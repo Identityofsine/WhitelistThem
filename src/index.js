@@ -88,8 +88,7 @@ class Video extends Identifiable {
 	disable() {
 		if (this.disabled) return;
 		if (ChromeExtension.enabled) {
-			//delete element
-			this.dom.remove();
+			this.dom.style.display = "none";
 		}
 
 		this.changeInjectionState(true);
@@ -99,8 +98,7 @@ class Video extends Identifiable {
 	enable() {
 		if (!this.disabled) return;
 		if (ChromeExtension.enabled) {
-			//add element
-			this.dom.parentElement.appendChild(this.dom);
+			this.dom.style.display = "block";
 		}
 
 		this.changeInjectionState(false);
@@ -266,7 +264,7 @@ class PageHandler {
 			this._onVideoRefresh.forEach(async (callback) => {
 				callback();
 			});
-			await sleep(() => { }, 1000);
+			await sleep(() => { }, 50);
 		}
 	}
 
@@ -565,7 +563,7 @@ async function inject(...args) {
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
-	ce.clearCacheRoutine();
+	//ce.clearCacheRoutine();
 
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
