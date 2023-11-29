@@ -136,6 +136,10 @@ class Video extends Identifiable {
 		};
 
 		element.onclick = onclick_function.bind(this);
+		//adjust for macbook trackpad
+		element.onmousedown = (e) => {
+			onclick_function();
+		}
 		this.dom.appendChild(element);
 		this.dom.dataset.whitelisted = true;
 	}
@@ -180,6 +184,19 @@ const YoutubeSettings = {
 		}
 	},
 	generic: {
+		header: {
+			container: {
+				tag: "ytd-masthead",
+				id: "masthead"
+			},
+			buttons: {
+				tag: "div",
+				id: "end",
+				inject: {
+					id: "buttons"
+				}
+			}
+		},
 		yt_video: {
 			channel: {
 				tag: "ytd-channel-name",
@@ -426,12 +443,13 @@ class ChromeExtension {
 	channels = new ChannelCache();
 	static allowed_channels = []; //string
 	static page_instance = new PageHandler();
-	static enabled = true;
+	static enabled = false;
 	searching = false;
 	started = false;
 
 	constructor(allowed_channels) {
 		ChromeExtension.allowed_channels = allowed_channels;
+		this.injectHeader();
 		this.start();
 	}
 
@@ -439,12 +457,41 @@ class ChromeExtension {
 		return this.channel;
 	}
 
+	//methods
+
+
 	async start() {
 		MessageHandler.send({ type: "get-channels" }, (response) => {
 			if (response.type === "query-channels") {
 				ChromeExtension.allowed_channels = response.channels;
 			}
 		});
+	}
+
+	static generateToggleDiv() {
+		const div = document.createElement("div");
+		div.id = "toggle";
+		div.innerHTML = `<h2>Toggle</h2>`;
+		div.onclick = () => {
+			ChromeExtension.enabled = !ChromeExtension.enabled;
+			if (ChromeExtension.enabled) {
+				div.innerHTML = `<h2>Enabled</h2>`;
+			} else {
+				div.innerHTML = `<h2>Disabled</h2>`;
+			}
+		}
+		return div;
+	}
+
+	async injectHeader() {
+		const header
+			= document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+		if (!header) return;
+		const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
+		const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
+		if (!buttons_container || !injection_spot) return;
+		const toggle_div = ChromeExtension.generateToggleDiv();
+		injection_spot.appendChild(toggle_div);
 	}
 
 	async deleteShorts() {
@@ -458,7 +505,6 @@ class ChromeExtension {
 		ChromeExtension.page_instance.onVideoRefresh = _deleteShorts;
 	}
 
-	//methods
 
 	/**
 	* @description Searches the current page for any video elements adds them into the array 
