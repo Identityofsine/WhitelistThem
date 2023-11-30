@@ -23,6 +23,20 @@
 #wt-toggle {
 	background: #fff;
 	padding: .5em;
+	cursor:pointer;
+	transition: .5s opacity;
+	opacity: .5;
 }
 
+#wt-toggle.on {
+	opacity: 1;
+}
 
+#wt-add {
+	margin-left: .25em;
+	font-size: 1.5em;
+	background: #fff;
+	padding: .25em;
+	border: 2px solid #000;
+	border-radius: 5px;
+}

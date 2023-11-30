@@ -60,6 +60,12 @@ async function getChannels() {
 async function getTab() {
 	let queryOptions = { active: true, currentWindow: true };
 	let tabs = await chrome.tabs.query(queryOptions);
+	let MAX_ATTEMPTS = 100;
+	while (tabs.length === 0 && MAX_ATTEMPTS > 0) {
+		tabs = await chrome.tabs.query(queryOptions);
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		MAX_ATTEMPTS--;
+	}
 	return tabs[0].url;
 }
 

@@ -162,8 +162,9 @@ class Video extends Identifiable {
 //static table
 
 const SleepSettings = {
-	waiting: 25,
-	engine: 300,
+	waiting: 100,
+	engine: 450,
+	max_attempts: 50,
 };
 
 const YoutubeSettings = {
@@ -317,12 +318,7 @@ class PageHandler {
 				update = true;
 				PageHandler.engine_running = false;
 				this.page_loaded = false;
-				if (this.page === "channel") {
-					//todo: remove channel
-					this.page = "home";
-				} else {
-					this.page = page;
-				}
+				this.page = page;
 				this.pageLoaded();
 			}
 			callback(page, update);
@@ -335,12 +331,16 @@ class PageHandler {
 			header_container = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
 		}
 		let buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
-		while (!buttons_container) {
-			await sleep(() => { }, SleepSettings.waiting);
+		let attempts = 0;
+		while (!buttons_container && attempts < SleepSettings.max_attempts) {
+			await sleep(() => { attempts++ }, SleepSettings.waiting);
 			buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
 			console.log("Waiting for buttons container");
 		}
-		callback();
+		if (attempts >= SleepSettings.max_attempts) {
+			console.error("[WT] Can't find header, I'm giving up...")
+		} else
+			callback();
 	}
 
 	async engine() {
@@ -375,18 +375,25 @@ class PageHandler {
 	}
 
 	async pageLoaded() {
-		while (!this.isVideoOnPage()) {
-			await sleep(() => { }, SleepSettings.waiting);
+		let attempts = 0;
+		while (!this.isVideoOnPage() && attempts < SleepSettings.max_attempts) {
+			await sleep(() => { attempts++ }, SleepSettings.waiting);
 		}
-		this.page_loaded = true;
-		this._onPageLoad.forEach(callback => {
-			callback();
-		});
-		this.engine.bind(this)();
+		if (attempts >= SleepSettings.max_attempts) {
+			console.error("[WT] Can't find videos, I'm giving up...")
+		}
+		else {
+			this.page_loaded = true;
+			this._onPageLoad.forEach(callback => {
+				callback();
+			});
+			this.engine.bind(this)();
+		}
 	}
 
 	async getPage() {
 		return new Promise((resolve, _reject) => {
+			console.log("trying to get page")
 			chrome.runtime.sendMessage({ type: "get-page" }, (response) => {
 				resolve(response.page);
 			});
@@ -580,9 +587,11 @@ class ChromeExtension {
 
 		if (ChromeExtension.enabled) {
 			div.innerHTML = `<h2>Enabled</h2>`;
+			div.classList.add("on");
 		}
 		else {
 			div.innerHTML = `<h2>Disabled</h2>`;
+			div.classList.remove("on");
 		}
 
 		div.onclick = () => {
@@ -590,8 +599,10 @@ class ChromeExtension {
 			ChromeExtension.setEnabled(ChromeExtension.enabled);
 			if (ChromeExtension.enabled) {
 				div.innerHTML = `<h2>Enabled</h2>`;
+				div.classList.add("on");
 			} else {
 				div.innerHTML = `<h2>Disabled</h2>`;
+				div.classList.remove("on");
 			}
 		}
 		return div;
@@ -601,18 +612,18 @@ class ChromeExtension {
 		const div = document.createElement("div");
 		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
 		if (ChromeExtension.allowed_channels.includes(channel.name))
-			div.innerHTML = `<h2>-</h2>`;
+			div.innerHTML = `<h2>Blacklist Channel</h2>`;
 		else
-			div.innerHTML = `<h2>+</h2>`;
+			div.innerHTML = `<h2>Whitelist Channel</h2>`;
 		div.onclick = () => {
 			if (ChromeExtension.allowed_channels.includes(channel.name)) {
 				ChromeExtension.removeAllowedChannel(channel.name);
 				MessageHandler.removeChannel(channel.name);
-				div.innerHTML = `<h2>+</h2>`;
+				div.innerHTML = `<h2>Whitelist Channel</h2>`;
 			} else {
 				ChromeExtension.addAllowedChannel(channel.name);
 				MessageHandler.addChannel(channel.name);
-				div.innerHTML = `<h2>-</h2>`;
+				div.innerHTML = `<h2>Blacklist Channel</h2>`;
 			}
 		}
 		return div;
@@ -730,7 +741,6 @@ class ChromeExtension {
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
 					const videof_obj = VideoFactory.createVideo(video_dom);
-					console.log(videof_obj);
 					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
 					if (_channel)
 						_channel.addVideo(videof_obj.video);
@@ -787,6 +797,13 @@ async function inject(...args) {
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
 
+	ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
+		console.log("LOADED");
+		if (ChromeExtension.currentPage === "channel")
+			ce.injectChannel();
+		ce.injectHeader();
+	});
+
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 		if (request.type === "update") {
@@ -794,6 +811,7 @@ async function inject(...args) {
 				if (page === "channel" && updated) {
 					ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
 						ce.injectChannel();
+						ce.injectHeader();
 					});
 				}
 				ce.clearCache();
@@ -802,5 +820,5 @@ async function inject(...args) {
 	});
 }
 
-inject();
+//inject();
 
