@@ -526,6 +526,10 @@ class ChromeExtension {
 		return this.channel;
 	}
 
+	static get currentPage() {
+		return ChromeExtension.page_instance.page;
+	}
+
 	//methods
 
 	static async getEnabled() {
@@ -610,34 +614,34 @@ class ChromeExtension {
 		const _grabVideos = async () => {
 
 			const getContainers = () => {
-				if (is_home) {
-					return document.getElementsByTagName(YoutubeSettings.home.container);
-				} else {
-					return document.getElementsByTagName(YoutubeSettings.video.container);
+				switch (ChromeExtension.currentPage) {
+					case "channel":
+					case "home":
+						return document.getElementsByTagName(YoutubeSettings.home.container);
+					case "video":
+						return document.getElementsByTagName(YoutubeSettings.video.container);
+					default:
+						return document.getElementsByTagName(YoutubeSettings.home.container);
 				}
 			}
 
-			const is_home = ChromeExtension.page_instance.page === "home";
 			let containers = getContainers();
-
 			for (let i = 0; i < containers.length; i++) {
 				let videos;
-				if (is_home) {
-					videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
+				switch (ChromeExtension.currentPage) {
+					case "channel":
+					case "home":
+						videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
+						break;
+					case "video":
+						videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
+						const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
+						for (let i = 0; i < circles.length; i++) {
+							const circle = circles[i];
+							circle.style.display = "none";
+						}
+						break;
 				}
-				else {
-					videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
-					//delete all circles 
-					const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
-					for (let i = 0; i < circles.length; i++) {
-						const circle = circles[i];
-						circle.style.display = "none";
-					}
-
-				}
-
-				getContainers();
-
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
 					const videof_obj = VideoFactory.createVideo(video_dom);
