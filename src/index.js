@@ -253,6 +253,7 @@ class PageHandler {
 	page_loaded = false;
 	static engine_running = false;
 	page = "home";
+	engine_instance = [];
 	_onVideoRefresh = [];
 	_onPageLoad = [];
 
@@ -263,6 +264,13 @@ class PageHandler {
 			console.log("Page: ", this.page);
 			this.pageLoaded();
 		});
+	}
+
+	static craft_engine_instance(instance, page) {
+		return {
+			engine: instance,
+			page: page
+		};
 	}
 
 	isPageLoading() {
@@ -320,9 +328,16 @@ class PageHandler {
 			console.log("[%s] Engine not running (%s)", page, loop_id);
 		}
 		PageHandler.engine_running = true;
+		this.engine_instance.push(PageHandler.craft_engine_instance(loop_id, page));
 		console.log("[%s]Engine started (%s)", page, loop_id);
 		while (this.page_loaded) {
 			if (this.page != page) break;
+			this.engine_instance.forEach((instance) => {
+				if (instance.page != page) another_instance = true;
+				console.log("[%s]Engine instance:", page, instance);
+			});
+			if (another_instance) break;
+
 			this._onVideoRefresh.forEach(async (callback) => {
 				if (this.page != page) return;
 				callback();
@@ -686,8 +701,8 @@ async function inject(...args) {
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 		if (request.type === "update") {
-			ce.clearCache();
 			ChromeExtension.page_instance.refreshPage(() => {
+				ce.clearCache();
 			});
 		}
 	});
