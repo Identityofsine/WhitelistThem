@@ -635,16 +635,18 @@ class ChromeExtension {
 	static async generateAddDiv(channel) {
 		const div = document.createElement("div");
 		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
+		div.dataset.channel = channel;
 		if (ChromeExtension.allowed_channels.includes(channel))
 			div.innerHTML = `<h2>Blacklist Channel</h2>`;
 		else
 			div.innerHTML = `<h2>Whitelist Channel</h2>`;
 		div.onclick = () => {
-			if (ChromeExtension.allowed_channels.includes(channel)) {
-				ChromeExtension.removeAllowedChannel(channel);
+			const channel_name_dataset = div.dataset.channel;
+			if (ChromeExtension.allowed_channels.includes(channel_name_dataset)) {
+				ChromeExtension.removeAllowedChannel(channel_name_dataset);
 				div.innerHTML = `<h2>Whitelist Channel</h2>`;
 			} else {
-				ChromeExtension.addAllowedChannel(channel);
+				ChromeExtension.addAllowedChannel(channel_name_dataset);
 				div.innerHTML = `<h2>Blacklist Channel</h2>`;
 			}
 		}
@@ -683,17 +685,36 @@ class ChromeExtension {
 	}
 
 	async refreshChannelInjection(div, channel_name) {
+		if (div.dataset.channel !== channel_name) {
+			console.warn("[channel] Channel name mismatch");
+			div.dataset.channel = channel_name;
+		}
+		/*
 		if (ChromeExtension.allowed_channels.includes(channel_name)) {
 			div.innerHTML = `<h2>Blacklist Channel</h2>`;
 		}
 		else {
 			div.innerHTML = `<h2>Whitelist Channel</h2>`;
-		}
+		}*/
 	}
 
 	async injectChannel() {
 
 		if (ChromeExtension.page_instance.page !== "channel") return;
+
+		const injection_check = document.querySelectorAll("#wt-add");
+		const channel_name = await this.getChannelNameFromChannelPage();
+
+		if (injection_check.length > 0) {
+			if (injection_check.length >= 2) {
+				console.warn("[channel] Too many Channel Injections, deleting all but one");
+				for (let i = 1; i < injection_check.length; i++) {
+					injection_check[i].remove();
+				}
+			}
+			await this.refreshChannelInjection(injection_check, channel_name);
+			return;
+		}
 
 		const container = await PageHandler.WaitForElement(() => document.querySelector(`#` + YoutubeSettings.channel.inject.container.id));
 		const injection_spot = container.querySelector("#" + YoutubeSettings.channel.inject.injection_spot.id);
@@ -702,13 +723,8 @@ class ChromeExtension {
 			console.log("[channel] No injection spot");
 			return;
 		}
-		const injection_check = injection_spot.querySelector("#wt-add");
-		const channel_name = await this.getChannelNameFromChannelPage();
 
 		if (!channel_name) {
-			return;
-		}
-		if (injection_check) {
 			return;
 		}
 
@@ -832,13 +848,10 @@ async function inject(...args) {
 		ce.injectHeader();
 		ce.injectChannel();
 	}
+
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
-
-	ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
-		console.log("[injector] Header Loaded");
-	});
 
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
@@ -854,7 +867,10 @@ async function inject(...args) {
 			});
 		}
 	});
+
+	return true;
 }
 
-inject();
-
+while (true) {
+	if (inject()) break;
+}

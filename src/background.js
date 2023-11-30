@@ -68,8 +68,8 @@ async function getChannels() {
 	return result;
 }
 
-async function getTab() {
-	let queryOptions = { active: true, currentWindow: true };
+async function getTab(tabIndex) {
+	let queryOptions = { active: true, currentWindow: true, index: tabIndex };
 	let tabs = await chrome.tabs.query(queryOptions);
 	let MAX_ATTEMPTS = 100;
 	while (tabs.length === 0 && MAX_ATTEMPTS > 0) {
@@ -160,9 +160,10 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 //return current page (home or video)
 chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-page") {
-		getTab().then((result) => {
+		//get tab id
+		const tabIndex = _sender.tab.index;
+		getTab(tabIndex).then((result) => {
 			const page = determinePageType(result);
-			console.log("Sending page:", page);
 			_sendResponse({ type: "query-page", page: page });
 		});
 		return true;
