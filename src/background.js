@@ -147,5 +147,23 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	}
 });
 
+chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+	if (request.type === "get-enabled") {
+		Storage.get("enabled").then((result) => {
+			_sendResponse({ type: "query-enabled", enabled: result.enabled });
+			console.log("Sending enabled: ", result.enabled);
+		});
+		return true;
+	}
+});
+
+chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+	if (request.type === "set-enabled") {
+		Storage.set("enabled", request.enabled ?? true);
+		console.log("Setting enabled to: ", request.enabled);
+		return true;
+	}
+});
+
 
 

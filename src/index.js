@@ -470,6 +470,18 @@ class ChromeExtension {
 
 	//methods
 
+	static async getEnabled() {
+		return new Promise((resolve, _reject) => {
+			MessageHandler.send({ type: "get-enabled" }, (response) => {
+				console.log(response.enabled);
+				resolve(response.enabled);
+			});
+		});
+	}
+
+	static setEnabled(enabled) {
+		MessageHandler.send({ type: "set-enabled", enabled: enabled });
+	}
 
 	async start() {
 		MessageHandler.send({ type: "get-channels" }, (response) => {
@@ -479,9 +491,11 @@ class ChromeExtension {
 		});
 	}
 
-	static generateToggleDiv() {
+	static async generateToggleDiv() {
 		const div = document.createElement("div");
 		div.id = "wt-toggle";
+
+		ChromeExtension.enabled = await ChromeExtension.getEnabled();
 
 		if (ChromeExtension.enabled) {
 			div.innerHTML = `<h2>Enabled</h2>`;
@@ -492,6 +506,7 @@ class ChromeExtension {
 
 		div.onclick = () => {
 			ChromeExtension.enabled = !ChromeExtension.enabled;
+			ChromeExtension.setEnabled(ChromeExtension.enabled);
 			if (ChromeExtension.enabled) {
 				div.innerHTML = `<h2>Enabled</h2>`;
 			} else {
@@ -508,12 +523,12 @@ class ChromeExtension {
 		const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
 		const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
 		if (!buttons_container || !injection_spot) return;
-		const toggle_div = ChromeExtension.generateToggleDiv();
+		const toggle_div = await ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
-		ChromeExtension.page_instance.onVideoRefresh = () => {
+		ChromeExtension.page_instance.onVideoRefresh = async () => {
 			const toggle_div = document.getElementById("wt-toggle");
 			if (toggle_div) return;
-			const toggle_div_new = ChromeExtension.generateToggleDiv();
+			const toggle_div_new = await ChromeExtension.generateToggleDiv();
 			injection_spot.appendChild(toggle_div_new);
 		}
 	}
