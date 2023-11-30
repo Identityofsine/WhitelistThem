@@ -92,8 +92,10 @@ class Video extends Identifiable {
 			} else {
 				this.dom.style.display = "block";
 			}
-		};
+			return;
+		}
 		this.dom.style.display = "block";
+		this.changeInjectionState(this.disabled);
 	}
 
 	disable() {
@@ -249,6 +251,7 @@ class MessageHandler {
 class PageHandler {
 	init = false;
 	page_loaded = false;
+	engine_running = false;
 	page = "home";
 	_onVideoRefresh = [];
 	_onPageLoad = [];
@@ -279,6 +282,7 @@ class PageHandler {
 	refreshPage(callback = () => { }) {
 		this.getPage().then((page) => {
 			if (this.page !== page) {
+				this.engine_running = false;
 				this.page_loaded = false;
 				this.page = page;
 				this.pageLoaded();
@@ -287,13 +291,33 @@ class PageHandler {
 		});
 	}
 
+	async WaitUntilHeaderLoaded(callback = () => { }) {
+		let header_container = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+		while (!header_container) {
+			header_container = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+		}
+		let buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
+		while (!buttons_container) {
+			await sleep(() => { }, 25);
+			buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
+			console.log("Waiting for buttons container");
+		}
+		callback();
+	}
+
 	async engine() {
+		const loop_id = Identifiable.generateUUID();
+		const page = this.page;
+		console.log("[%s]Engine started (%s)", page, loop_id);
 		while (this.page_loaded) {
+			if (this.page != page) break;
 			this._onVideoRefresh.forEach(async (callback) => {
+				if (this.page != page) return;
 				callback();
 			});
-			await sleep(() => { }, 50);
+			await sleep(() => { }, 25);
 		}
+		console.log("[%s]Engine stopped (%s)", page, loop_id);
 	}
 
 	async pageLoaded() {
@@ -304,7 +328,7 @@ class PageHandler {
 		this._onPageLoad.forEach(callback => {
 			callback();
 		});
-		this.engine();
+		this.engine.bind(this)();
 	}
 
 	async getPage() {
@@ -460,7 +484,6 @@ class ChromeExtension {
 
 	constructor(allowed_channels) {
 		ChromeExtension.allowed_channels = allowed_channels;
-		this.injectHeader();
 		this.start();
 	}
 
@@ -473,7 +496,6 @@ class ChromeExtension {
 	static async getEnabled() {
 		return new Promise((resolve, _reject) => {
 			MessageHandler.send({ type: "get-enabled" }, (response) => {
-				console.log(response.enabled);
 				resolve(response.enabled);
 			});
 		});
@@ -492,6 +514,7 @@ class ChromeExtension {
 	}
 
 	static async generateToggleDiv() {
+
 		const div = document.createElement("div");
 		div.id = "wt-toggle";
 
@@ -517,20 +540,15 @@ class ChromeExtension {
 	}
 
 	async injectHeader() {
-		const header
-			= document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+		const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
 		if (!header) return;
 		const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
 		const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
 		if (!buttons_container || !injection_spot) return;
+		const injection_check = injection_spot.querySelector("#wt-toggle");
+		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
-		ChromeExtension.page_instance.onVideoRefresh = async () => {
-			const toggle_div = document.getElementById("wt-toggle");
-			if (toggle_div) return;
-			const toggle_div_new = await ChromeExtension.generateToggleDiv();
-			injection_spot.appendChild(toggle_div_new);
-		}
 	}
 
 	async deleteShorts() {
@@ -646,10 +664,12 @@ class ChromeExtension {
 //used by the background script
 async function inject(...args) {
 	const ce = new ChromeExtension([]);
+	ChromeExtension.page_instance.onVideoRefresh = () => {
+		ce.injectHeader();
+	}
 	ce.search();
 	ce.startVideoDisableLoop();
 	ce.deleteShorts();
-	//ce.clearCacheRoutine();
 
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
