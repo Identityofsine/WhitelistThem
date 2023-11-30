@@ -160,6 +160,12 @@ class Video extends Identifiable {
 }
 
 //static table
+
+const SleepSettings = {
+	waiting: 25,
+	engine: 300,
+};
+
 const YoutubeSettings = {
 	home: {
 		container: "ytd-rich-grid-row",
@@ -311,7 +317,7 @@ class PageHandler {
 		}
 		let buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
 		while (!buttons_container) {
-			await sleep(() => { }, 25);
+			await sleep(() => { }, SleepSettings.waiting);
 			buttons_container = header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
 			console.log("Waiting for buttons container");
 		}
@@ -332,9 +338,10 @@ class PageHandler {
 		console.log("[%s]Engine started (%s)", page, loop_id);
 		while (this.page_loaded) {
 			if (this.page != page) break;
+
+			let another_instance = false;
 			this.engine_instance.forEach((instance) => {
-				if (instance.page != page) another_instance = true;
-				console.log("[%s]Engine instance:", page, instance);
+				if (instance.engine != loop_id && instance.page == page) another_instance = true;
 			});
 			if (another_instance) break;
 
@@ -342,14 +349,15 @@ class PageHandler {
 				if (this.page != page) return;
 				callback();
 			});
-			await sleep(() => { }, 25);
+			await sleep(() => { }, SleepSettings.engine);
 		}
+		this.engine_instance = this.engine_instance.filter(instance => instance.engine != loop_id);
 		console.log("[%s]Engine stopped (%s)", page, loop_id);
 	}
 
 	async pageLoaded() {
 		while (!this.isVideoOnPage()) {
-			await sleep(() => { }, 25);
+			await sleep(() => { }, SleepSettings.waiting);
 		}
 		this.page_loaded = true;
 		this._onPageLoad.forEach(callback => {
@@ -641,15 +649,6 @@ class ChromeExtension {
 		}
 
 		ChromeExtension.page_instance.onVideoRefresh = _grabVideos;
-	}
-
-	async clearCacheRoutine() {
-		while (true) {
-			await sleep(() => {
-				this.clearCache();
-			}, 1000 * 10);
-
-		}
 	}
 
 	async disableVideos() {
