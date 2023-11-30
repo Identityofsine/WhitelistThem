@@ -202,6 +202,23 @@ const YoutubeSettings = {
 			}
 		}
 	},
+	channel: {
+		channel: {
+			container: "ytd-channel-name",
+			tag: "yt-formatted-string",
+		},
+		inject: {
+			container: {
+				tag: "div",
+				id: "inner-header-container"
+			},
+			injection_spot: {
+				tag: "div",
+				id: "buttons",
+				inject_id: "wt-add"
+			}
+		}
+	},
 	generic: {
 		header: {
 			container: {
@@ -295,7 +312,9 @@ class PageHandler {
 
 	refreshPage(callback = () => { }) {
 		this.getPage().then((page) => {
+			let update = false;
 			if (this.page !== page) {
+				update = true;
 				PageHandler.engine_running = false;
 				this.page_loaded = false;
 				if (this.page === "channel") {
@@ -306,7 +325,7 @@ class PageHandler {
 				}
 				this.pageLoaded();
 			}
-			callback();
+			callback(page, update);
 		});
 	}
 
@@ -578,6 +597,27 @@ class ChromeExtension {
 		return div;
 	}
 
+	static async generateAddDiv(channel) {
+		const div = document.createElement("div");
+		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
+		if (ChromeExtension.allowed_channels.includes(channel.name))
+			div.innerHTML = `<h2>-</h2>`;
+		else
+			div.innerHTML = `<h2>+</h2>`;
+		div.onclick = () => {
+			if (ChromeExtension.allowed_channels.includes(channel.name)) {
+				ChromeExtension.removeAllowedChannel(channel.name);
+				MessageHandler.removeChannel(channel.name);
+				div.innerHTML = `<h2>+</h2>`;
+			} else {
+				ChromeExtension.addAllowedChannel(channel.name);
+				MessageHandler.addChannel(channel.name);
+				div.innerHTML = `<h2>-</h2>`;
+			}
+		}
+		return div;
+	}
+
 	async injectHeader() {
 		const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
 		if (!header) return;
@@ -588,6 +628,51 @@ class ChromeExtension {
 		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
+	}
+
+	async getChannelNameFromChannelPage() {
+		if (ChromeExtension.page_instance.page !== "channel") {
+			console.log("[channel] Not on channel page");
+			return;
+		};
+		const channel_container = document.getElementsByTagName(YoutubeSettings.channel.channel.container)[0];
+		if (!channel_container) {
+			console.log("[channel] No channel container");
+			return;
+		};
+		const channel_tag = channel_container.querySelector(YoutubeSettings.channel.channel.tag);
+		if (!channel_tag) {
+			console.log("[channel] No channel tag");
+			return;
+		};
+		const channel_name = channel_tag.innerText;
+
+		return channel_name;
+	}
+
+	async injectChannel() {
+		const container = document.querySelector(`#` + YoutubeSettings.channel.inject.container.id);
+		if (!container) {
+			console.log("[channel] No container");
+			return;
+		}
+		const injection_spot = container.querySelector("#" + YoutubeSettings.channel.inject.injection_spot.id);
+		if (!injection_spot) {
+			console.log("[channel] No injection spot");
+			return;
+		}
+		const injection_check = injection_spot.querySelector("#wt-add");
+		if (injection_check) {
+			console.log("[channel] Injection already exists");
+			return;
+		}
+		const channel_name = await this.getChannelNameFromChannelPage();
+		if (!channel_name) {
+			console.log("[channel] No channel name");
+			return;
+		}
+		const div = await ChromeExtension.generateAddDiv(channel_name);
+		injection_spot.appendChild(div);
 	}
 
 	async deleteShorts() {
@@ -638,13 +723,14 @@ class ChromeExtension {
 						const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
 						for (let i = 0; i < circles.length; i++) {
 							const circle = circles[i];
-							circle.style.display = "none";
+							circle.style.opacity = "0";
 						}
 						break;
 				}
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z];
 					const videof_obj = VideoFactory.createVideo(video_dom);
+					console.log(videof_obj);
 					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
 					if (_channel)
 						_channel.addVideo(videof_obj.video);
@@ -704,7 +790,12 @@ async function inject(...args) {
 	//run chrome listener on update, and check the page
 	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 		if (request.type === "update") {
-			ChromeExtension.page_instance.refreshPage(() => {
+			ChromeExtension.page_instance.refreshPage((page, updated) => {
+				if (page === "channel" && updated) {
+					ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
+						ce.injectChannel();
+					});
+				}
 				ce.clearCache();
 			});
 		}
