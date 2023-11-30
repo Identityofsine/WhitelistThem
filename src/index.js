@@ -251,7 +251,7 @@ class MessageHandler {
 class PageHandler {
 	init = false;
 	page_loaded = false;
-	engine_running = false;
+	static engine_running = false;
 	page = "home";
 	_onVideoRefresh = [];
 	_onPageLoad = [];
@@ -282,9 +282,14 @@ class PageHandler {
 	refreshPage(callback = () => { }) {
 		this.getPage().then((page) => {
 			if (this.page !== page) {
-				this.engine_running = false;
+				PageHandler.engine_running = false;
 				this.page_loaded = false;
-				this.page = page;
+				if (this.page === "channel") {
+					//todo: remove channel
+					this.page = "home";
+				} else {
+					this.page = page;
+				}
 				this.pageLoaded();
 			}
 			callback();
@@ -308,6 +313,13 @@ class PageHandler {
 	async engine() {
 		const loop_id = Identifiable.generateUUID();
 		const page = this.page;
+		if (PageHandler.engine_running) {
+			console.log("[%s] Engine already running (%s)", page, loop_id);
+			return;
+		} else {
+			console.log("[%s] Engine not running (%s)", page, loop_id);
+		}
+		PageHandler.engine_running = true;
 		console.log("[%s]Engine started (%s)", page, loop_id);
 		while (this.page_loaded) {
 			if (this.page != page) break;
