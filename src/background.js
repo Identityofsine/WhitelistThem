@@ -48,6 +48,17 @@ class Storage {
 	}
 }
 
+//clean routine
+function cleanRoutine() {
+	Storage.get("channels").then((result) => {
+		let channels = result.channels;
+		//filter out null values
+		channels = channels.filter((c) => c !== null);
+		console.log(channels);
+		Storage.set("channels", channels);
+	});
+}
+
 // chrome runtime listener
 Storage.createIfNotExists("channels", []);
 Storage.createIfNotExists("enabled", true);
@@ -65,6 +76,10 @@ async function getTab() {
 		tabs = await chrome.tabs.query(queryOptions);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		MAX_ATTEMPTS--;
+	}
+	if (MAX_ATTEMPTS === 0) {
+		console.log("Error: Could not get tab...")
+		return null;
 	}
 	return tabs[0].url;
 }
@@ -107,6 +122,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 			if (channels.includes(request.channel)) {
 				return;
 			} else {
+				if ((request.channel?.length ?? 0) <= 0) return; //ignore
 				debugPrint("Adding Channel: " + request.channel);
 				channels.push(request.channel);
 				Storage.set("channels", channels);
@@ -172,4 +188,4 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 
-
+cleanRoutine();
