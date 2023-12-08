@@ -3,14 +3,19 @@
   "name": "Whitelist",
   "version": "1.0",
   "description": "Cater your YouTube experience to what you need.",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "{48f8037a-bf52-4f12-8302-e6f923e9a898}",
+			"strict_min_version": "40.0"
+		}
+	},
   "permissions": [
 		"tabs",
     "activeTab",
     "storage"
   ],
 	"background" : {
-		"service_worker": "./src/background.js",
-		"type": "module"
+		"scripts": ["./src/background.js"]
 	},
   "content_scripts": [
     {

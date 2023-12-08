@@ -981,5 +981,11 @@ async function inject(...args: any[]) {
 	return true;
 }
 
+<<<<<<< HEAD:src/index.ts
 inject();
+=======
+while (true) {
+	if (inject()) break;
+}
+>>>>>>> 8b53249 (added firefox support):src/index.js
 

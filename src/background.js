@@ -8,12 +8,13 @@ function debugPrint(text) {
 }
 
 class Storage {
-	static storage = chrome.storage.sync;
+	static storage = browser.storage.sync;
 
 	static async createIfNotExists(key, init_value) {
 		return new Promise((resolve, _reject) => {
-			this.storage.get(key, (result) => {
+			this.storage.get(key).then((result) => {
 				if (result[key] === undefined) {
+
 					this.storage.set({ [key]: init_value }, () => { });
 					resolve(true);
 				} else {
@@ -25,7 +26,7 @@ class Storage {
 
 	static async get(key) {
 		return new Promise((resolve, _reject) => {
-			this.storage.get(key, (result) => {
+			this.storage.get(key).then((result) => {
 				resolve(result);
 			});
 		});
@@ -51,6 +52,7 @@ class Storage {
 //clean routine
 function cleanRoutine() {
 	Storage.get("channels").then((result) => {
+		if (result.channels === undefined) return;
 		let channels = result.channels;
 		//filter out null values
 		channels = channels.filter((c) => c !== null);
@@ -59,7 +61,7 @@ function cleanRoutine() {
 	});
 }
 
-// chrome runtime listener
+// browser runtime listener
 Storage.createIfNotExists("channels", []);
 Storage.createIfNotExists("enabled", true);
 
@@ -70,10 +72,10 @@ async function getChannels() {
 
 async function getTab(tabIndex) {
 	let queryOptions = { active: true, currentWindow: true, index: tabIndex };
-	let tabs = await chrome.tabs.query(queryOptions);
+	let tabs = await browser.tabs.query(queryOptions);
 	let MAX_ATTEMPTS = 100;
 	while (tabs.length === 0 && MAX_ATTEMPTS > 0) {
-		tabs = await chrome.tabs.query(queryOptions);
+		tabs = await browser.tabs.query(queryOptions);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		MAX_ATTEMPTS--;
 	}
@@ -105,9 +107,9 @@ function determinePageType(url) {
 
 
 //send message to content script to refresh -- called when site is changed or updated
-chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 	if (changeInfo.status === "complete") {
-		chrome.tabs.sendMessage(tab.id, { type: "update" });
+		browser.tabs.sendMessage(tab.id, { type: "update" });
 	}
 });
 
@@ -115,7 +117,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 
 
 //recieve message from content script
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "add-channel") {
 		Storage.get("channels").then((result) => {
 			let channels = result.channels;
@@ -132,7 +134,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //recieve message from content script
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "remove-channel") {
 		Storage.get("channels").then((result) => {
 			let channels = result.channels;
@@ -147,7 +149,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //recieve message from channels 
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-channels") {
 		getChannels().then((result) => {
 			console.log("Sending channels: ", result.channels);
@@ -158,7 +160,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //return current page (home or video)
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-page") {
 		//get tab id
 		const tabIndex = _sender.tab.index;
@@ -170,7 +172,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	}
 });
 
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-enabled") {
 		Storage.get("enabled").then((result) => {
 			_sendResponse({ type: "query-enabled", enabled: result.enabled });
@@ -180,7 +182,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	}
 });
 
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "set-enabled") {
 		Storage.set("enabled", request.enabled ?? true);
 		console.log("Setting enabled to: ", request.enabled);
