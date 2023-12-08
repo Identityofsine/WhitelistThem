@@ -49,31 +49,27 @@ Every channel (`https://youtube.com/@any`) you visit will be pure and you can wa
 
 ## Extract
 
-First Clone this repo or click the Green `Code` button in the top right of this repo and click `Download ZIP` and then extract the file into it's own folder, you're going to have a folder inside your extraction, this folder is named `WhitelistThem-main`, this `WhitelistThem-main` folder will be where you will tell chrome to import the plugin.
+First Clone this repo or click the Green `Code` button in the top right of this repo and click `Download ZIP` and then extract the file into it's own folder, you're going to have a folder inside your extraction, this folder is named `WhitelistThem-main`, this `WhitelistThem-main` folder will be where you will tell FireFox to import the plugin.
 
 ## Enable Developer Mode
 
-Open a new tab on chrome and type in the following into the URL/Search Bar:
+Open a new tab on FireFox and type in the following into the URL/Search Bar: 
 
-> `chrome://extensions`
+> `about:debugging`
 
-Once there, you are going to see a small toggle switch in the top right, this toggle switch is labeled **Developer Mode**, toggle it on.
-
-
-![Extensions](./readme-pics/image.png "Figure 1.0")
+Once there, you are going to see a menu to the left, click on the tab `This Firefox` 
 
 
-After toggling it you should see a tri-set of buttons in the top left under *Extensions*, the button we will need is named **Load Unpacked**
+![Extensions](./readme-pics/firefox/image.png "Figure 1.0")
 
-![Unpacked](./readme-pics/image2.png "Figure 1.1")
 
-### Why?
+After clicking the tab, You should see a field **Temporary Extensions** 
 
-We have to enable Developer Mode to use this extension (for now) because this extension is not approved by chrome -- meaning that it can't be installed from the chrome store. Until then, we will use this method!
+![Unpacked](./readme-pics/firefox/image2.png "Figure 1.1")
 
 ## Install the Extension
 
-Once you see the button, click on it and it should show you a file explorer, lead yourself to the folder you extracted, and open it. Make sure you import the `WhitelistThem-main` nested inside the extracted folder, otherwise it will not work.
+Click on the button Load Temporary Add-on and it should show you a file explorer, lead yourself to the folder you extracted, and open it. Make sure you import the `WhitelistThem-main` nested inside the extracted folder, otherwise it will not work.
 
 > If you encounter an error where a `manifest.json` file is missing, try searching a folder that contains `manifest.json` and `./src`
 
