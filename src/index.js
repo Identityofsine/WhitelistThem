@@ -874,3 +874,4 @@ async function inject(...args) {
 while (true) {
 	if (inject()) break;
 }
+
