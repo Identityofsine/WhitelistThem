@@ -68,6 +68,14 @@ class Channel extends Identifiable {
 		}
 	}
 
+	enable() {
+		this.videos.forEach(video => video.enable());
+	}
+
+	disable() {
+		this.videos.forEach(video => video.disable());
+	}
+
 }
 
 class Video extends Identifiable {
@@ -148,10 +156,12 @@ class Video extends Identifiable {
 				MessageHandler.addChannel(channel.name);
 				ChromeExtension.addAllowedChannel(channel.name);
 				this.enable();
+				channel.enable();
 			} else {
 				MessageHandler.removeChannel(channel.name);
 				ChromeExtension.removeAllowedChannel(channel.name);
 				this.disable();
+				channel.disable();
 			}
 		};
 
@@ -802,6 +812,20 @@ class ChromeExtension {
 
 	async disableVideos() {
 		let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
+		//enable videos for allowed channels
+		for (let i = 0; i < ChromeExtension.allowed_channels.length; i++) {
+			const channel_name = ChromeExtension.allowed_channels[i];
+			const channel = this.channels.addChannel(channel_name);
+			if (!channel) continue;
+			for (let z = 0; z < channel.videos.length; z++) {
+				const video = channel.videos[z];
+				video.refresh();
+				if (!video.disabled) continue;
+				video.enable();
+			}
+		}
+
+		//disable videos for banned channels
 		for (let i = 0; i < banned_channels.length; i++) {
 			const channel = banned_channels[i];
 			for (let z = 0; z < channel.videos.length; z++) {
