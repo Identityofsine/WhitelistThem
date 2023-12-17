@@ -695,17 +695,22 @@ class ChromeExtension {
 	}
 
 	async refreshChannelInjection(div, channel_name) {
-		if (div.dataset.channel !== channel_name) {
-			console.warn("[channel] Channel name mismatch");
+		if (!div) {
+			return;
+		}
+		if (!div.dataset) {
+			div.dataset = { channel: channel_name };
+		}
+		if (div.dataset?.channel !== channel_name) {
+			console.warn("[channel] Channel name mismatch (expected: %s, got: %s)", div.dataset?.channel, channel_name);
 			div.dataset.channel = channel_name;
 		}
-		/*
 		if (ChromeExtension.allowed_channels.includes(channel_name)) {
 			div.innerHTML = `<h2>Blacklist Channel</h2>`;
 		}
 		else {
 			div.innerHTML = `<h2>Whitelist Channel</h2>`;
-		}*/
+		}
 	}
 
 	async injectChannel() {
@@ -713,7 +718,7 @@ class ChromeExtension {
 		if (ChromeExtension.page_instance.page !== "channel") return;
 
 		const injection_check = document.querySelectorAll("#wt-add");
-		const channel_name = await this.getChannelNameFromChannelPage();
+		let channel_name = await this.getChannelNameFromChannelPage();
 
 		if (injection_check.length > 0) {
 			if (injection_check.length >= 2) {
@@ -722,7 +727,7 @@ class ChromeExtension {
 					injection_check[i].remove();
 				}
 			}
-			await this.refreshChannelInjection(injection_check, channel_name);
+			channel_name = await this.refreshChannelInjection(injection_check?.[0], channel_name);
 			return;
 		}
 
