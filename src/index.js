@@ -563,6 +563,18 @@ class ChannelCache {
 		}
 	}
 
+	disableVideos() {
+		this.channels.forEach(channel => {
+			channel.disable();
+		});
+	}
+
+	enableVideos() {
+		this.channels.forEach(channel => {
+			channel.enable();
+		});
+	}
+
 	clearCache() {
 		this.channels = [];
 	}
@@ -817,7 +829,9 @@ class ChromeExtension {
 
 	async disableVideos() {
 		let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
-		//enable videos for allowed channels
+		banned_channels.forEach(channel => channel.disable());
+
+		/*
 		for (let i = 0; i < ChromeExtension.allowed_channels.length; i++) {
 			const channel_name = ChromeExtension.allowed_channels[i];
 			const channel = this.channels.addChannel(channel_name);
@@ -829,7 +843,10 @@ class ChromeExtension {
 				video.enable();
 			}
 		}
+		*/
 
+
+		/*
 		//disable videos for banned channels
 		for (let i = 0; i < banned_channels.length; i++) {
 			const channel = banned_channels[i];
@@ -840,6 +857,7 @@ class ChromeExtension {
 				video.disable();
 			}
 		}
+		*/
 	}
 
 	startVideoDisableLoop() {
