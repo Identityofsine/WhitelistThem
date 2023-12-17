@@ -180,7 +180,7 @@ class Video extends Identifiable {
 
 const SleepSettings = {
 	waiting: 100,
-	engine: 450,
+	engine: 800,
 	max_attempts: 50,
 };
 
@@ -830,34 +830,6 @@ class ChromeExtension {
 	async disableVideos() {
 		let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
 		banned_channels.forEach(channel => channel.disable());
-
-		/*
-		for (let i = 0; i < ChromeExtension.allowed_channels.length; i++) {
-			const channel_name = ChromeExtension.allowed_channels[i];
-			const channel = this.channels.addChannel(channel_name);
-			if (!channel) continue;
-			for (let z = 0; z < channel.videos.length; z++) {
-				const video = channel.videos[z];
-				video.refresh();
-				if (!video.disabled) continue;
-				video.enable();
-			}
-		}
-		*/
-
-
-		/*
-		//disable videos for banned channels
-		for (let i = 0; i < banned_channels.length; i++) {
-			const channel = banned_channels[i];
-			for (let z = 0; z < channel.videos.length; z++) {
-				const video = channel.videos[z];
-				video.refresh();
-				if (video.disabled) continue;
-				video.disable();
-			}
-		}
-		*/
 	}
 
 	startVideoDisableLoop() {
