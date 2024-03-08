@@ -1,11 +1,21 @@
 .toggle-page {
-	width: 10rem;
-	height: 10rem;
+	min-width: 20rem;
+	min-height: 30rem;
+	padding: 4rem;
 	background-color: red;
 	display: none;
 
+	//position center;
+	top: 110%;
+	left: 50%;
+	transform: translate(-50%, 0);
+
 	&.open {
-		display: absolute;
+		position: absolute;
+		display: block;
 	}
 
 }
+
+
+//global styles

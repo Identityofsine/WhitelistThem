@@ -26,6 +26,7 @@
   cursor: pointer;
   transition: 0.5s opacity;
   margin-right: 0.5em;
+  position: relative;
 }
 
 #wt-toggle {

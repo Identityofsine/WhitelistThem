@@ -1,11 +1,16 @@
 .toggle-page {
-  width: 10rem;
-  height: 10rem;
+  min-width: 20rem;
+  min-height: 30rem;
+  padding: 4rem;
   background-color: red;
   display: none;
+  top: 110%;
+  left: 50%;
+  transform: translate(-50%, 0);
 }
 .toggle-page.open {
-  display: absolute;
+  position: absolute;
+  display: block;
 }
 
 /*# sourceMappingURL=tagger.css.map */

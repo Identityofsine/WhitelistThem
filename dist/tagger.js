@@ -20,8 +20,11 @@ function h2(text, attr = {}) {
 function tdiv(attr = {}, ...children) {
     return tag('div', attr, ...children);
 }
-function t_toggle_page() {
-    const container = tdiv({ class: 'toggle-page open' });
+function tflex(attr = {}, ...children) {
+    return tag('div', Object.assign({ class: 'flex' }, attr), ...children);
+}
+function t_toggle_page(className, attr, ...children) {
+    const container = tdiv(Object.assign({ class: `toggle-page open ${className}` }, attr), ...children);
     function toggle() {
         if (container.classList.contains('open')) {
             container.classList.remove('open');

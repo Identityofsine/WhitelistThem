@@ -28,11 +28,15 @@ function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', attr, ...children);
 }
 
+function tflex(attr: Attribute = {}, ...children: HTMLElement[]) {
+	return tag('div', { class: 'flex', ...attr }, ...children);
+}
+
 type Dispatch<T = any> = ((...value: T[]) => void);
 
-function t_toggle_page(): { element: HTMLElement, toggle: Dispatch } {
+function t_toggle_page(className: string, attr: Attribute, ...children: HTMLElement[]): { element: HTMLElement, toggle: Dispatch } {
 
-	const container = tdiv({ class: 'toggle-page open' });
+	const container = tdiv({ class: `toggle-page open ${className}`, ...attr }, ...children);
 
 	function toggle() {
 		if (container.classList.contains('open')) {
