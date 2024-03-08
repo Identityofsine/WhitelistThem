@@ -97,7 +97,7 @@ class Video extends Identifiable {
 
 	changeInjectionState(plus: boolean) {
 		if (!this.dom) return;
-		const element = document.getElementById("#whitelist-spot");
+		const element = this.dom.querySelector("#whitelist-spot");
 		if (!element) return;
 		if (plus) {
 			element.innerHTML = `<h2>+</h2>`;
