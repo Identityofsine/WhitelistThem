@@ -277,6 +277,7 @@ const YoutubeSettings = {
 type ChromeMessage = {
 	type: string;
 	channel?: string;
+	channels?: string[];
 	enabled?: boolean;
 }
 
@@ -622,9 +623,11 @@ class ChannelCache {
 
 class Serializer {
 
-	static importChannels(channels: any) {
-		//TODO: Import channels
-		console.error("[Serializer] Importing channels not implemented");
+	static importChannels(channels: string) {
+		const json_parsed = JSON.parse(channels) as string[];
+		if (Array.isArray(json_parsed)) {
+			return json_parsed;
+		}
 		return undefined;
 	}
 
@@ -688,13 +691,35 @@ class ChromeExtension {
 
 	private static async generateTogglePage() {
 
-		const flex = tflex(["column", "wrap"], "", {},
+		const channel_input = tinput("text", "Input Channel JSON Here", "");
+		const flex = tflex(["column", "wrap"], "gap-02", {},
+			th2("Channel Serializer"),
+			channel_input.input,
 			tflex(["column", "align-center"], "gap-01", {},
-				tinput("text"),
-				tbutton(() => { }, "Submit", "fill-width")
-			));
-		const page = t_toggle_page("right-0", {}, flex);
+				tbutton(() => {
+					const channels = Serializer.importChannels(channel_input.state.state());
+					if (channels) {
+						MessageHandler.send({ type: "set-channels", channels: channels }, () => {
+							ChromeExtension.refreshChannels();
+						});
+					}
+				}, "Submit", "fill-width")
+			),
+			tbutton(() => {
+				const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
+				console.log("[serializer] Exporting: %s", export_string);
+				//copy to clipboard
+				navigator.clipboard.writeText(export_string).then(() => {
+					console.log("[serializer] Copied to clipboard");
+				}).catch((err) => {
+					console.error("[serializer] Error: %s (clipboard failed)", err);
+				});
 
+				alert("Channels exported to clipboard");
+
+			}, "Channels to Clipboard", "fill-width"),
+		);
+		const page = t_toggle_page("right-0", {}, flex);
 		return page;
 	}
 
@@ -702,15 +727,6 @@ class ChromeExtension {
 		const small_page = await this.generateTogglePage();
 		const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
 		div.onclick = () => {
-			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
-			console.log("[serializer] Exporting: %s", export_string);
-			//copy to clipboard
-			navigator.clipboard.writeText(export_string).then(() => {
-				console.log("[serializer] Copied to clipboard");
-			}).catch((err) => {
-				console.error("[serializer] Error: %s (clipboard failed)", err);
-			});
-			//alert("Channels exported to clipboard");
 			small_page.toggle();
 		}
 
@@ -808,6 +824,16 @@ class ChromeExtension {
 		const channel_name = channel_tag.innerText;
 
 		return channel_name;
+	}
+
+	static async refreshChannels() {
+		ChromeExtension.allowed_channels = [];
+		MessageHandler.send({ type: "get-channels" }, (response) => {
+			if (response.type === "query-channels") {
+				console.log("[serializer] Refreshing channels");
+				ChromeExtension.allowed_channels = response.channels;
+			}
+		});
 	}
 
 	async refreshChannelInjection(div: HTMLChannelElement, channel_name: string) {

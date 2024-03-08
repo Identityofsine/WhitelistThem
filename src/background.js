@@ -128,6 +128,13 @@ Browser.browser_instance.tabs.onUpdated.addListener((_tabId, changeInfo, tab) =>
 
 
 
+//setchannels
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+	if (request.type === "set-channels") {
+		Storage.set("channels", request.channels);
+		_sendResponse({ type: "reload-channels", channels: request.channels });
+	}
+});
 
 //recieve message from content script
 Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {

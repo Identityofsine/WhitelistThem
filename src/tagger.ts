@@ -4,16 +4,40 @@ type Attribute = { [key: string]: any };
 
 
 type State<T> = {
-	state: T | null;
+	state: DispatchWithResult<void, T>;
 	setState: Dispatch<T>;
 }
 
-function createState<T>(initialState: T | null): State<T> {
+class Updater {
+	private static instance: Updater;
+	private events: Dispatch[] = [];
+
+	private constructor() { }
+	static getInstance() {
+		if (!Updater.instance) {
+			Updater.instance = new Updater();
+		}
+		return Updater.instance;
+	}
+
+	public registerEvent(event: Dispatch) {
+		this.events.push(event);
+	}
+
+	public update() {
+		this.events.forEach((event) => {
+			event();
+		});
+	}
+}
+
+function createState<T>(initialState: T): State<T> {
 	let state = initialState;
 	const setState = (newState: T) => {
 		state = newState;
+		Updater.getInstance().update();
 	};
-	return { state, setState };
+	return { state: () => state, setState };
 }
 
 
@@ -51,8 +75,18 @@ function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 type InputElementProps = "text" | "password" | "checkbox" | "radio" | "submit" | "reset" | "file" | "hidden" | "image" | "button";
 
 
-function tinput(props: InputElementProps, defaultValue: string = "", onValueChange: Dispatch<string>, className: string = "", attr: Attribute = {}) {
-	return tag('input', { type: props, class: className, ...attr });
+function tinput(props: InputElementProps, placeHolder: string = "", defaultValue: string = "", onValueChange?: Dispatch<string>, className: string = "", attr: Attribute = {}) {
+	const state: State<string> = createState(defaultValue);
+	const input = tag('input', { type: props, placeholder: placeHolder, class: className, ...attr }) as HTMLInputElement;
+	input.value = defaultValue;
+	input.addEventListener("input", (e: Event) => {
+		onValueChange && onValueChange(state.state());
+	})
+	function update() {
+		input.value = state.state();
+	}
+	Updater.getInstance().registerEvent(update);
+	return { input, state };
 }
 
 function tbutton(onclick: Dispatch, text: string, className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {

@@ -564,8 +564,10 @@ class ChannelCache {
 }
 class Serializer {
     static importChannels(channels) {
-        //TODO: Import channels
-        console.error("[Serializer] Importing channels not implemented");
+        const json_parsed = JSON.parse(channels);
+        if (Array.isArray(json_parsed)) {
+            return json_parsed;
+        }
         return undefined;
     }
     /**
@@ -613,7 +615,25 @@ class ChromeExtension {
     }
     static generateTogglePage() {
         return __awaiter(this, void 0, void 0, function* () {
-            const flex = tflex(["column", "wrap"], "", {}, tflex(["column", "align-center"], "gap-01", {}, tinput("text"), tbutton(() => { }, "Submit", "fill-width")));
+            const channel_input = tinput("text", "Input Channel JSON Here", "");
+            const flex = tflex(["column", "wrap"], "gap-02", {}, th2("Channel Serializer"), channel_input.input, tflex(["column", "align-center"], "gap-01", {}, tbutton(() => {
+                const channels = Serializer.importChannels(channel_input.state.state());
+                if (channels) {
+                    MessageHandler.send({ type: "set-channels", channels: channels }, () => {
+                        ChromeExtension.refreshChannels();
+                    });
+                }
+            }, "Submit", "fill-width")), tbutton(() => {
+                const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
+                console.log("[serializer] Exporting: %s", export_string);
+                //copy to clipboard
+                navigator.clipboard.writeText(export_string).then(() => {
+                    console.log("[serializer] Copied to clipboard");
+                }).catch((err) => {
+                    console.error("[serializer] Error: %s (clipboard failed)", err);
+                });
+                alert("Channels exported to clipboard");
+            }, "Channels to Clipboard", "fill-width"));
             const page = t_toggle_page("right-0", {}, flex);
             return page;
         });
@@ -623,15 +643,6 @@ class ChromeExtension {
             const small_page = yield this.generateTogglePage();
             const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
             div.onclick = () => {
-                const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
-                console.log("[serializer] Exporting: %s", export_string);
-                //copy to clipboard
-                navigator.clipboard.writeText(export_string).then(() => {
-                    console.log("[serializer] Copied to clipboard");
-                }).catch((err) => {
-                    console.error("[serializer] Error: %s (clipboard failed)", err);
-                });
-                //alert("Channels exported to clipboard");
                 small_page.toggle();
             };
             return div;
@@ -740,6 +751,17 @@ class ChromeExtension {
             ;
             const channel_name = channel_tag.innerText;
             return channel_name;
+        });
+    }
+    static refreshChannels() {
+        return __awaiter(this, void 0, void 0, function* () {
+            ChromeExtension.allowed_channels = [];
+            MessageHandler.send({ type: "get-channels" }, (response) => {
+                if (response.type === "query-channels") {
+                    console.log("[serializer] Refreshing channels");
+                    ChromeExtension.allowed_channels = response.channels;
+                }
+            });
         });
     }
     refreshChannelInjection(div, channel_name) {

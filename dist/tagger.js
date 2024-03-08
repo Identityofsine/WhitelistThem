@@ -1,11 +1,31 @@
 "use strict";
 console.log('[tagger framework] loaded');
+class Updater {
+    constructor() {
+        this.events = [];
+    }
+    static getInstance() {
+        if (!Updater.instance) {
+            Updater.instance = new Updater();
+        }
+        return Updater.instance;
+    }
+    registerEvent(event) {
+        this.events.push(event);
+    }
+    update() {
+        this.events.forEach((event) => {
+            event();
+        });
+    }
+}
 function createState(initialState) {
     let state = initialState;
     const setState = (newState) => {
         state = newState;
+        Updater.getInstance().update();
     };
-    return { state, setState };
+    return { state: () => state, setState };
 }
 function flattenString(arr) {
     return arr.join(' ');
@@ -31,8 +51,18 @@ function th2(text, attr = {}) {
 function tdiv(attr = {}, ...children) {
     return tag('div', attr, ...children);
 }
-function tinput(props, defaultValue = "", onValueChange, className = "", attr = {}) {
-    return tag('input', Object.assign({ type: props, class: className }, attr));
+function tinput(props, placeHolder = "", defaultValue = "", onValueChange, className = "", attr = {}) {
+    const state = createState(defaultValue);
+    const input = tag('input', Object.assign({ type: props, placeholder: placeHolder, class: className }, attr));
+    input.value = defaultValue;
+    input.addEventListener("input", (e) => {
+        onValueChange && onValueChange(state.state());
+    });
+    function update() {
+        input.value = state.state();
+    }
+    Updater.getInstance().registerEvent(update);
+    return { input, state };
 }
 function tbutton(onclick, text, className = "", attr = {}, ...children) {
     const button = tag('button', Object.assign({ class: className }, attr), ...children);
