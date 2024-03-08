@@ -77,6 +77,10 @@ class Channel extends Identifiable {
 		this.videos.forEach(video => video.disable());
 	}
 
+	refresh() {
+		this.videos.forEach(video => video.refresh());
+	}
+
 }
 
 class Video extends Identifiable {
@@ -926,6 +930,9 @@ async function inject(...args) {
 		ce.injectHeader();
 		ce.injectSeralizerButton();
 		ce.injectChannel();
+		ce.channels.channels.forEach(channel => {
+			channel.refresh();
+		});
 	}
 
 	ce.search();
