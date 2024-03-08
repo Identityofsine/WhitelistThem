@@ -1,6 +1,6 @@
 console.log('[tagger framework] loaded');
 type Tag = keyof HTMLElementTagNameMap;
-type Attribute = { [key: string]: string };
+type Attribute = { [key: string]: any };
 
 function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 	const element = document.createElement(tag);
@@ -11,9 +11,39 @@ function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 		});
 	}
 
+	if (children) {
+		children.forEach((child) => {
+			element.appendChild(child);
+		});
+	}
+
 	return element;
 }
 
-function div(attr: Attribute, ...children: HTMLElement[]) {
+function h2(text: string, attr: Attribute = {}) {
+	return tag('h2', { ...attr }, document.createTextNode(text) as any);
+}
+
+function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', attr, ...children);
 }
+
+type Dispatch<T = any> = ((...value: T[]) => void);
+
+function t_toggle_page(): { element: HTMLElement, toggle: Dispatch } {
+
+	const container = tdiv({ class: 'toggle-page open' });
+
+	function toggle() {
+		if (container.classList.contains('open')) {
+			container.classList.remove('open');
+			return;
+		} else {
+			container.classList.add('open');
+		}
+	}
+
+	return { element: container, toggle };
+}
+
+

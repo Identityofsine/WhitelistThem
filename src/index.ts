@@ -152,7 +152,7 @@ class Video extends Identifiable {
 			return;
 		}
 
-		const element = tag("div");
+		const element = tdiv();
 
 		if (!this.disabled)
 			element.innerHTML = `<h2>-</h2>`;
@@ -317,8 +317,6 @@ type EngineInstance = {
 	engine: string;
 	page: Pages;
 }
-
-type Dispatch<T = any> = (...value: T[]) => any;
 
 class PageHandler {
 	init = false;
@@ -682,9 +680,9 @@ class ChromeExtension {
 	}
 
 	static async generateSerializerDiv() {
-		const div = tag("div");
+		const small_page = t_toggle_page();
+		const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
 		div.id = "wt-serializer";
-		div.innerHTML = `<h2>Export/Import</h2>`;
 		div.onclick = () => {
 			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
 			console.log("[serializer] Exporting: %s", export_string);
@@ -694,7 +692,8 @@ class ChromeExtension {
 			}).catch((err) => {
 				console.error("[serializer] Error: %s (clipboard failed)", err);
 			});
-			alert("Channels exported to clipboard");
+			//alert("Channels exported to clipboard");
+			small_page.toggle();
 		}
 
 		return div;
@@ -702,8 +701,7 @@ class ChromeExtension {
 
 	static async generateToggleDiv() {
 
-		const div = tag("div");
-		div.id = "wt-toggle";
+		const div = tdiv({ id: "wt-toggle" });
 
 		ChromeExtension.enabled = await ChromeExtension.getEnabled();
 
@@ -731,9 +729,7 @@ class ChromeExtension {
 	}
 
 	static async generateAddDiv(channel: string) {
-		const div = tag("div");
-		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
-		div.dataset.channel = channel;
+		const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel: channel } });
 		if (ChromeExtension.allowed_channels.includes(channel))
 			div.innerHTML = `<h2>Blacklist Channel</h2>`;
 		else

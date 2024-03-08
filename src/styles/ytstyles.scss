@@ -1,0 +1,49 @@
+#whitelist-spot {
+	position: absolute;
+	top: -2em;
+	left: 1em;
+	z-index: 2;
+	width: fit-content;
+	height: fit-content;
+	padding: .5em;
+
+	h2 {
+		/* check color scheme */
+		color: #fff;
+		font-size: 5em;
+		font-weight: bold;
+		user-select: none;
+		pointer-events: all;
+		cursor: crosshair;
+		/* text-stroke */
+		-webkit-text-stroke: .05em #000;
+	}
+}
+
+
+
+#wt-toggle,
+#wt-serializer {
+	background: #fff;
+	padding: .5em;
+	cursor: pointer;
+	transition: .5s opacity;
+	margin-right: .5em;
+}
+
+#wt-toggle {
+	opacity: .5;
+
+	&.on {
+		opacity: 1;
+	}
+}
+
+#wt-add {
+	margin-left: .25em;
+	font-size: 1.5em;
+	background: #fff;
+	padding: .25em;
+	border: 2px solid #000;
+	border-radius: 5px;
+}

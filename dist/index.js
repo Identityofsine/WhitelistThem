@@ -148,7 +148,7 @@ class Video extends Identifiable {
             this.injected = true;
             return;
         }
-        const element = tag("div");
+        const element = tdiv();
         if (!this.disabled)
             element.innerHTML = `<h2>-</h2>`;
         else
@@ -608,9 +608,9 @@ class ChromeExtension {
     }
     static generateSerializerDiv() {
         return __awaiter(this, void 0, void 0, function* () {
-            const div = tag("div");
+            const small_page = t_toggle_page();
+            const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
             div.id = "wt-serializer";
-            div.innerHTML = `<h2>Export/Import</h2>`;
             div.onclick = () => {
                 const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
                 console.log("[serializer] Exporting: %s", export_string);
@@ -620,15 +620,15 @@ class ChromeExtension {
                 }).catch((err) => {
                     console.error("[serializer] Error: %s (clipboard failed)", err);
                 });
-                alert("Channels exported to clipboard");
+                //alert("Channels exported to clipboard");
+                small_page.toggle();
             };
             return div;
         });
     }
     static generateToggleDiv() {
         return __awaiter(this, void 0, void 0, function* () {
-            const div = tag("div");
-            div.id = "wt-toggle";
+            const div = tdiv({ id: "wt-toggle" });
             ChromeExtension.enabled = yield ChromeExtension.getEnabled();
             if (ChromeExtension.enabled) {
                 div.innerHTML = `<h2>Enabled</h2>`;
@@ -655,9 +655,7 @@ class ChromeExtension {
     }
     static generateAddDiv(channel) {
         return __awaiter(this, void 0, void 0, function* () {
-            const div = tag("div");
-            div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
-            div.dataset.channel = channel;
+            const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel: channel } });
             if (ChromeExtension.allowed_channels.includes(channel))
                 div.innerHTML = `<h2>Blacklist Channel</h2>`;
             else
