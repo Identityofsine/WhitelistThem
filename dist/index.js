@@ -128,8 +128,6 @@ class Video extends Identifiable {
         this.disabled = true;
     }
     enable() {
-        if (!this.disabled)
-            return;
         if (!this.dom)
             return;
         if (ChromeExtension.enabled) {
