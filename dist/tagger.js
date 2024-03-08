@@ -25,7 +25,7 @@ function tflex(attr = {}, ...children) {
     return tag('div', Object.assign({ class: 'flex' }, attr), ...children);
 }
 function t_toggle_page(className, attr, ...children) {
-    const container = tdiv(Object.assign({ class: `toggle-page open ${className}` }, attr), ...children);
+    const container = tdiv(Object.assign({ class: `toggle-page ${className}` }, attr), ...children);
     function toggle() {
         if (container.classList.contains('open')) {
             container.classList.remove('open');
