@@ -91,7 +91,7 @@ class Video extends Identifiable {
     changeInjectionState(plus) {
         if (!this.dom)
             return;
-        const element = this.dom.querySelector("#whitelist-spot");
+        const element = document.getElementById("#whitelist-spot");
         if (!element)
             return;
         if (plus) {
@@ -110,12 +110,13 @@ class Video extends Identifiable {
             }
             else {
                 this.dom.style.display = "block";
+                this.changeInjectionState(this.disabled);
             }
         }
         else {
             this.dom.style.display = "block";
+            this.changeInjectionState(this.disabled);
         }
-        this.changeInjectionState(this.disabled);
     }
     disable() {
         if (this.disabled)
@@ -179,7 +180,7 @@ class Video extends Identifiable {
 //static table
 const SleepSettings = {
     waiting: 250,
-    engine: 900,
+    engine: 1500,
     max_attempts: 50,
 };
 const YoutubeSettings = {
@@ -903,6 +904,12 @@ class ChromeExtension {
             banned_channels.forEach(channel => channel.disable());
         });
     }
+    enableVideos() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let allowed_channels = this.channels.channels.filter(channel => ChromeExtension.allowed_channels.includes(channel.name));
+            allowed_channels.forEach(channel => channel.enable());
+        });
+    }
     startVideoDisableLoop() {
         console.log("[inject] Starting Video Disable Routine...");
         ChromeExtension.page_instance.onVideoRefresh = this.disableVideos.bind(this);
@@ -911,9 +918,6 @@ class ChromeExtension {
         this.channels.clearCache();
     }
     refreshCache() {
-        this.channels.channels.forEach(channel => {
-            channel.refresh();
-        });
     }
     static addAllowedChannel(channel_name) {
         if (!ChromeExtension.allowed_channels.includes(channel_name)) {
