@@ -2,6 +2,21 @@ console.log('[tagger framework] loaded');
 type Tag = keyof HTMLElementTagNameMap;
 type Attribute = { [key: string]: any };
 
+
+type State<T> = {
+	state: T | null;
+	setState: Dispatch<T>;
+}
+
+function createState<T>(initialState: T | null): State<T> {
+	let state = initialState;
+	const setState = (newState: T) => {
+		state = newState;
+	};
+	return { state, setState };
+}
+
+
 function flattenString(arr: string[]): string {
 	return arr.join(' ');
 }
@@ -25,7 +40,7 @@ function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 	return element;
 }
 
-function h2(text: string, attr: Attribute = {}) {
+function th2(text: string, attr: Attribute = {}) {
 	return tag('h2', { ...attr }, document.createTextNode(text) as any);
 }
 
@@ -33,12 +48,30 @@ function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', attr, ...children);
 }
 
+type InputElementProps = "text" | "password" | "checkbox" | "radio" | "submit" | "reset" | "file" | "hidden" | "image" | "button";
+
+
+function tinput(props: InputElementProps, defaultValue: string = "", onValueChange: Dispatch<string>, className: string = "", attr: Attribute = {}) {
+	return tag('input', { type: props, class: className, ...attr });
+}
+
+function tbutton(onclick: Dispatch, text: string, className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
+	const button = tag('button', { class: className, ...attr }, ...children);
+	button.appendChild(document.createTextNode(text));
+	button.onclick = (e) => {
+		e.preventDefault();
+		onclick();
+	}
+	return button;
+}
+
 type FlexElementProps = "column" | "row" | "align-center" | "align-start" | "align-end" | "justify-center" | "justify-start" | "justify-end" | "justify-between" | "justify-around" | "wrap";
-function tflex(props: FlexElementProps[] = [], attr: Attribute = {}, ...children: HTMLElement[]) {
-	return tag('div', { class: `flex ${flattenString(props)}`, ...attr }, ...children);
+function tflex(props: FlexElementProps[] = [], className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
+	return tag('div', { class: `flex ${flattenString(props)} ${className}`, ...attr }, ...children);
 }
 
 type Dispatch<T = any> = ((...value: T[]) => void);
+type DispatchWithResult<A = any, R = any> = ((...value: A[]) => R);
 
 function t_toggle_page(className: string = "", attr: Attribute = {}, ...children: HTMLElement[]): { element: HTMLElement, toggle: Dispatch } {
 

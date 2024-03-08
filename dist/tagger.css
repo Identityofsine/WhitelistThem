@@ -2,18 +2,43 @@
   min-width: 20rem;
   min-height: 30rem;
   padding: 4rem;
-  background-color: red;
+  background-color: #fff;
+  border-radius: 0.25rem;
+  border: 2px solid #f0f0f0;
+  box-shadow: 0px 14px 64px rgba(68, 61, 46, 0.05);
   display: none;
-  top: 110%;
-  left: 50%;
-  transform: translate(-50%, 0);
+  cursor: default;
+  top: 130%;
 }
 .toggle-page.open {
   position: absolute;
   display: block;
 }
 
+input.tag {
+  padding: 1.2rem 2rem;
+  border: 1px solid #f0f0f0;
+  border-radius: 0.25rem;
+  font-size: 1.6rem;
+}
+
+button.tag {
+  color: black;
+  background: #101010;
+  border-radius: 4px;
+  padding: 0.8814rem 1.2029rem;
+  border: solid 1.5px #fff;
+  color: white;
+  box-shadow: 0px 14px 64px rgba(5, 5, 5, 0.05);
+  user-select: none;
+  font-size: 2.4rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .tag {
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
   /* flex */
   /* position */
 }

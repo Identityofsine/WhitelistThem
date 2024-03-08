@@ -613,14 +613,15 @@ class ChromeExtension {
     }
     static generateTogglePage() {
         return __awaiter(this, void 0, void 0, function* () {
-            const page = t_toggle_page();
+            const flex = tflex(["column", "wrap"], "", {}, tflex(["column", "align-center"], "gap-01", {}, tinput("text"), tbutton(() => { }, "Submit", "fill-width")));
+            const page = t_toggle_page("right-0", {}, flex);
             return page;
         });
     }
     static generateSerializerDiv() {
         return __awaiter(this, void 0, void 0, function* () {
             const small_page = yield this.generateTogglePage();
-            const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
+            const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
             div.onclick = () => {
                 const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
                 console.log("[serializer] Exporting: %s", export_string);
@@ -700,6 +701,7 @@ class ChromeExtension {
                 return;
             const toggle_div = yield ChromeExtension.generateToggleDiv();
             injection_spot.appendChild(toggle_div);
+            yield this.injectSeralizerButton();
         });
     }
     injectSeralizerButton() {
@@ -895,7 +897,6 @@ function inject(...args) {
         console.log("[injector] Injecting...");
         ChromeExtension.page_instance.onVideoRefresh = () => {
             ce.injectHeader();
-            ce.injectSeralizerButton();
             ce.injectChannel();
             ce.channels.channels.forEach(channel => {
                 channel.refresh();
@@ -911,7 +912,6 @@ function inject(...args) {
                     if (page === "channel" && updated) {
                         ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
                             ce.injectChannel();
-                            ce.injectSeralizerButton();
                             ce.injectHeader();
                         });
                     }

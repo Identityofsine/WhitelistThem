@@ -687,14 +687,20 @@ class ChromeExtension {
 	}
 
 	private static async generateTogglePage() {
-		const page = t_toggle_page();
+
+		const flex = tflex(["column", "wrap"], "", {},
+			tflex(["column", "align-center"], "gap-01", {},
+				tinput("text"),
+				tbutton(() => { }, "Submit", "fill-width")
+			));
+		const page = t_toggle_page("right-0", {}, flex);
 
 		return page;
 	}
 
 	static async generateSerializerDiv() {
 		const small_page = await this.generateTogglePage();
-		const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
+		const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
 		div.onclick = () => {
 			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
 			console.log("[serializer] Exporting: %s", export_string);
@@ -770,6 +776,7 @@ class ChromeExtension {
 		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
+		await this.injectSeralizerButton();
 	}
 
 	async injectSeralizerButton() {
@@ -963,7 +970,6 @@ async function inject(...args: any[]) {
 	console.log("[injector] Injecting...");
 	ChromeExtension.page_instance.onVideoRefresh = () => {
 		ce.injectHeader();
-		ce.injectSeralizerButton();
 		ce.injectChannel();
 		ce.channels.channels.forEach(channel => {
 			channel.refresh();
@@ -981,7 +987,6 @@ async function inject(...args: any[]) {
 				if (page === "channel" && updated) {
 					ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
 						ce.injectChannel();
-						ce.injectSeralizerButton();
 						ce.injectHeader();
 					});
 				}

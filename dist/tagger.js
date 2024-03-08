@@ -1,5 +1,12 @@
 "use strict";
 console.log('[tagger framework] loaded');
+function createState(initialState) {
+    let state = initialState;
+    const setState = (newState) => {
+        state = newState;
+    };
+    return { state, setState };
+}
 function flattenString(arr) {
     return arr.join(' ');
 }
@@ -18,14 +25,26 @@ function tag(tag, attr = {}, ...children) {
     }
     return element;
 }
-function h2(text, attr = {}) {
+function th2(text, attr = {}) {
     return tag('h2', Object.assign({}, attr), document.createTextNode(text));
 }
 function tdiv(attr = {}, ...children) {
     return tag('div', attr, ...children);
 }
-function tflex(props = [], attr = {}, ...children) {
-    return tag('div', Object.assign({ class: `flex ${flattenString(props)}` }, attr), ...children);
+function tinput(props, defaultValue = "", onValueChange, className = "", attr = {}) {
+    return tag('input', Object.assign({ type: props, class: className }, attr));
+}
+function tbutton(onclick, text, className = "", attr = {}, ...children) {
+    const button = tag('button', Object.assign({ class: className }, attr), ...children);
+    button.appendChild(document.createTextNode(text));
+    button.onclick = (e) => {
+        e.preventDefault();
+        onclick();
+    };
+    return button;
+}
+function tflex(props = [], className = "", attr = {}, ...children) {
+    return tag('div', Object.assign({ class: `flex ${flattenString(props)} ${className}` }, attr), ...children);
 }
 function t_toggle_page(className = "", attr = {}, ...children) {
     const container = tdiv(Object.assign({ class: `toggle-page ${className}` }, attr), ...children);
