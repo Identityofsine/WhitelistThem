@@ -1,7 +1,7 @@
 #whitelist-spot {
 	position: absolute;
 	top: -2em;
-  left: 1em;
+	left: 1em;
 	z-index: 2;
 	width: fit-content;
 	height: fit-content;
@@ -9,7 +9,7 @@
 }
 
 #whitelist-spot h2 {
-	/* check color scheme */	
+	/* check color scheme */
 	color: #fff;
 	font-size: 5em;
 	font-weight: bold;
@@ -20,11 +20,16 @@
 	-webkit-text-stroke: .05em #000;
 }
 
-#wt-toggle {
+#wt-toggle,
+#wt-serializer {
 	background: #fff;
 	padding: .5em;
-	cursor:pointer;
+	cursor: pointer;
 	transition: .5s opacity;
+	margin-right: .5em;
+}
+
+#wt-toggle {
 	opacity: .5;
 }
 

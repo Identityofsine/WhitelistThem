@@ -1,3 +1,4 @@
+
 class TimeoutError extends Error {
 	constructor(message) {
 		super(message);
@@ -142,7 +143,7 @@ class Video extends Identifiable {
 			return;
 		}
 
-		const element = document.createElement("div");
+		const element = tag("div");
 
 		if (!this.disabled)
 			element.innerHTML = `<h2>-</h2>`;
@@ -589,10 +590,6 @@ class ChannelCache {
 
 class Serializer {
 
-	static stringToBase64(str) {
-		return btoa(str);
-	}
-
 	static importChannels(channels) {
 		//TODO: Import channels
 		console.error("[Serializer] Importing channels not implemented");
@@ -605,7 +602,7 @@ class Serializer {
 		*/
 	static exportChannels(channels) {
 		const json_channels = JSON.stringify(channels);
-		return Serializer.stringToBase64(json_channels);
+		return (json_channels);
 	}
 
 }
@@ -655,10 +652,20 @@ class ChromeExtension {
 	}
 
 	static async generateSerializerDiv() {
-		const div = document.createElement("div");
+		const div = tag("div");
 		div.id = "wt-serializer";
+		div.innerHTML = `<h2>Export/Import</h2>`;
 		div.onclick = () => {
-			console.log("sex");
+			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
+			console.log("[serializer] Exporting: %s", export_string);
+			MessageHandler.send({ type: "export-channels", channels: export_string });
+			//copy to clipboard
+			navigator.clipboard.writeText(export_string).then(() => {
+				console.log("[serializer] Copied to clipboard");
+			}).catch((err) => {
+				console.error("[serializer] Error: %s (clipboard failed)", err);
+			});
+			alert("Channels exported to clipboard");
 		}
 
 		return div;
@@ -666,7 +673,7 @@ class ChromeExtension {
 
 	static async generateToggleDiv() {
 
-		const div = document.createElement("div");
+		const div = tag("div");
 		div.id = "wt-toggle";
 
 		ChromeExtension.enabled = await ChromeExtension.getEnabled();
@@ -695,7 +702,7 @@ class ChromeExtension {
 	}
 
 	static async generateAddDiv(channel) {
-		const div = document.createElement("div");
+		const div = tag("div");
 		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
 		div.dataset.channel = channel;
 		if (ChromeExtension.allowed_channels.includes(channel))
@@ -932,7 +939,6 @@ async function inject(...args) {
 				if (page === "channel" && updated) {
 					ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
 						ce.injectChannel();
-
 						ce.injectSeralizerButton();
 						ce.injectHeader();
 					});
@@ -948,3 +954,4 @@ async function inject(...args) {
 while (true) {
 	if (inject()) break;
 }
+
