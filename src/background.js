@@ -133,6 +133,12 @@ Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendR
 	if (request.type === "set-channels") {
 		Storage.set("channels", request.channels);
 		_sendResponse({ type: "reload-channels", channels: request.channels });
+		//send update to all tabs
+		Browser.browser_instance.tabs.query({}, (tabs) => {
+			tabs.forEach((tab) => {
+				Browser.browser_instance.tabs.sendMessage(tab.id, { type: "update-channels", channels: request.channels });
+			});
+		});
 	}
 });
 

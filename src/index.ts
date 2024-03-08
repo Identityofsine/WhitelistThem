@@ -624,11 +624,16 @@ class ChannelCache {
 class Serializer {
 
 	static importChannels(channels: string) {
-		const json_parsed = JSON.parse(channels) as string[];
-		if (Array.isArray(json_parsed)) {
-			return json_parsed;
+		try {
+			const json_parsed = JSON.parse(channels) as string[];
+			if (Array.isArray(json_parsed)) {
+				return json_parsed;
+			}
+			throw new Error(`Invalid JSON : (${channels})`);
+		} catch (e) {
+			console.error("[serializer::import] Error: %s (obj: %s)", e, channels);
+			return undefined;
 		}
-		return undefined;
 	}
 
 	/**
@@ -636,8 +641,13 @@ class Serializer {
 		* @returns {string} string should be a serialized JSON object that contains the channels
 		*/
 	static exportChannels(channels: string[]) {
-		const json_channels = JSON.stringify(channels);
-		return (json_channels);
+		try {
+			const json_channels = JSON.stringify(channels);
+			return (json_channels);
+		} catch (e) {
+			console.error("[serializer::export] Error: %s", e);
+			return undefined;
+		}
 	}
 
 }
@@ -702,6 +712,8 @@ class ChromeExtension {
 						MessageHandler.send({ type: "set-channels", channels: channels }, () => {
 							ChromeExtension.refreshChannels();
 						});
+					} else {
+						alert("Invalid JSON/ChannelScript");
 					}
 				}, "Submit", "fill-width")
 			),
@@ -709,7 +721,7 @@ class ChromeExtension {
 				const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
 				console.log("[serializer] Exporting: %s", export_string);
 				//copy to clipboard
-				navigator.clipboard.writeText(export_string).then(() => {
+				navigator.clipboard.writeText(export_string ?? "[]").then(() => {
 					console.log("[serializer] Copied to clipboard");
 				}).catch((err) => {
 					console.error("[serializer] Error: %s (clipboard failed)", err);
@@ -960,7 +972,9 @@ class ChromeExtension {
 
 	async disableVideos() {
 		let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
+		let allowed_channels = this.channels.channels.filter(channel => ChromeExtension.allowed_channels.includes(channel.name));
 		banned_channels.forEach(channel => channel.disable());
+		allowed_channels.forEach(channel => channel.enable());
 	}
 
 	startVideoDisableLoop() {
@@ -971,6 +985,7 @@ class ChromeExtension {
 	clearCache() {
 		this.channels.clearCache();
 	}
+
 
 	static addAllowedChannel(channel_name: string) {
 		if (!ChromeExtension.allowed_channels.includes(channel_name)) {
@@ -1016,10 +1031,15 @@ async function inject(...args: any[]) {
 						ce.injectHeader();
 					});
 				}
-				ce.clearCache();
 			});
+			ce.clearCache();
+		} else if (request.type === "update-channels") {
+			console.log("[injector] Updating Channels");
+			ce.clearCache();
 		}
 	});
+
+
 
 	return true;
 }

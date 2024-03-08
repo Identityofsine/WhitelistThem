@@ -564,19 +564,31 @@ class ChannelCache {
 }
 class Serializer {
     static importChannels(channels) {
-        const json_parsed = JSON.parse(channels);
-        if (Array.isArray(json_parsed)) {
-            return json_parsed;
+        try {
+            const json_parsed = JSON.parse(channels);
+            if (Array.isArray(json_parsed)) {
+                return json_parsed;
+            }
+            throw new Error(`Invalid JSON : (${channels})`);
         }
-        return undefined;
+        catch (e) {
+            console.error("[serializer::import] Error: %s (obj: %s)", e, channels);
+            return undefined;
+        }
     }
     /**
         * @param {Channel[]} channel_name_dataset
         * @returns {string} string should be a serialized JSON object that contains the channels
         */
     static exportChannels(channels) {
-        const json_channels = JSON.stringify(channels);
-        return (json_channels);
+        try {
+            const json_channels = JSON.stringify(channels);
+            return (json_channels);
+        }
+        catch (e) {
+            console.error("[serializer::export] Error: %s", e);
+            return undefined;
+        }
     }
 }
 class ChromeExtension {
@@ -623,11 +635,14 @@ class ChromeExtension {
                         ChromeExtension.refreshChannels();
                     });
                 }
+                else {
+                    alert("Invalid JSON/ChannelScript");
+                }
             }, "Submit", "fill-width")), tbutton(() => {
                 const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
                 console.log("[serializer] Exporting: %s", export_string);
                 //copy to clipboard
-                navigator.clipboard.writeText(export_string).then(() => {
+                navigator.clipboard.writeText(export_string !== null && export_string !== void 0 ? export_string : "[]").then(() => {
                     console.log("[serializer] Copied to clipboard");
                 }).catch((err) => {
                     console.error("[serializer] Error: %s (clipboard failed)", err);
@@ -886,7 +901,9 @@ class ChromeExtension {
     disableVideos() {
         return __awaiter(this, void 0, void 0, function* () {
             let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
+            let allowed_channels = this.channels.channels.filter(channel => ChromeExtension.allowed_channels.includes(channel.name));
             banned_channels.forEach(channel => channel.disable());
+            allowed_channels.forEach(channel => channel.enable());
         });
     }
     startVideoDisableLoop() {
@@ -937,8 +954,12 @@ function inject(...args) {
                             ce.injectHeader();
                         });
                     }
-                    ce.clearCache();
                 });
+                ce.clearCache();
+            }
+            else if (request.type === "update-channels") {
+                console.log("[injector] Updating Channels");
+                ce.clearCache();
             }
         });
         return true;

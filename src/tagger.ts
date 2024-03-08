@@ -81,6 +81,7 @@ function tinput(props: InputElementProps, placeHolder: string = "", defaultValue
 	input.value = defaultValue;
 	input.addEventListener("input", (e: Event) => {
 		onValueChange && onValueChange(state.state());
+		state.setState(input.value);
 	})
 	function update() {
 		input.value = state.state();
