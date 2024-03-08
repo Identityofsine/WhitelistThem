@@ -9,6 +9,7 @@ function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 		Object.keys(attr).forEach((key) => {
 			element.setAttribute(key, attr[key]);
 		});
+		element.classList.add('tag');
 	}
 
 	if (children) {

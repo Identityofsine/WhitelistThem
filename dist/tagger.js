@@ -6,6 +6,7 @@ function tag(tag, attr = {}, ...children) {
         Object.keys(attr).forEach((key) => {
             element.setAttribute(key, attr[key]);
         });
+        element.classList.add('tag');
     }
     if (children) {
         children.forEach((child) => {
