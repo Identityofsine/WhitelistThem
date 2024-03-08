@@ -111,9 +111,10 @@ class Video extends Identifiable {
             else {
                 this.dom.style.display = "block";
             }
-            return;
         }
-        this.dom.style.display = "block";
+        else {
+            this.dom.style.display = "block";
+        }
         this.changeInjectionState(this.disabled);
     }
     disable() {
@@ -899,9 +900,7 @@ class ChromeExtension {
     disableVideos() {
         return __awaiter(this, void 0, void 0, function* () {
             let banned_channels = this.channels.channels.filter(channel => !ChromeExtension.allowed_channels.includes(channel.name));
-            let allowed_channels = this.channels.channels.filter(channel => ChromeExtension.allowed_channels.includes(channel.name));
             banned_channels.forEach(channel => channel.disable());
-            allowed_channels.forEach(channel => channel.enable());
         });
     }
     startVideoDisableLoop() {
@@ -910,6 +909,11 @@ class ChromeExtension {
     }
     clearCache() {
         this.channels.clearCache();
+    }
+    refreshCache() {
+        this.channels.channels.forEach(channel => {
+            channel.refresh();
+        });
     }
     static addAllowedChannel(channel_name) {
         if (!ChromeExtension.allowed_channels.includes(channel_name)) {
@@ -957,7 +961,7 @@ function inject(...args) {
             }
             else if (request.type === "update-channels") {
                 console.log("[injector] Updating Channels");
-                ce.clearCache();
+                ce.refreshCache();
             }
         });
         return true;
