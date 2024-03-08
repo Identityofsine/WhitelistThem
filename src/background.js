@@ -11,11 +11,9 @@ class Browser {
 	static get browser_instance() {
 		//check if browser is chrome or firefox	
 		if (typeof browser !== 'undefined') {
-			console.log("Welcome Firefox!");
 			return browser;
 		}
 		if (typeof chrome !== 'undefined') {
-			console.log("Welcome Chrome!");
 			return chrome;
 		}
 		throw new Error('No browser instance found');

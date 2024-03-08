@@ -280,7 +280,7 @@ type ChromeMessage = {
 	enabled?: boolean;
 }
 
-private class Browser {
+class Browser {
 	public static get isFirefox() {
 		return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
 	}
@@ -686,10 +686,15 @@ class ChromeExtension {
 		});
 	}
 
+	private static async generateTogglePage() {
+		const page = t_toggle_page();
+
+		return page;
+	}
+
 	static async generateSerializerDiv() {
-		const small_page = t_toggle_page();
+		const small_page = await this.generateTogglePage();
 		const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
-		div.id = "wt-serializer";
 		div.onclick = () => {
 			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
 			console.log("[serializer] Exporting: %s", export_string);
@@ -988,11 +993,5 @@ async function inject(...args: any[]) {
 	return true;
 }
 
-<<<<<<< HEAD:src/index.ts
 inject();
-=======
-while (true) {
-	if (inject()) break;
-}
->>>>>>> 8b53249 (added firefox support):src/index.js
 

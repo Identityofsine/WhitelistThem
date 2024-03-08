@@ -262,6 +262,11 @@ const YoutubeSettings = {
         }
     }
 };
+class Browser {
+    static get isFirefox() {
+        return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+    }
+}
 //communicate with service workers
 class MessageHandler {
     static send(message, callback) {
@@ -606,11 +611,16 @@ class ChromeExtension {
             });
         });
     }
+    static generateTogglePage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const page = t_toggle_page();
+            return page;
+        });
+    }
     static generateSerializerDiv() {
         return __awaiter(this, void 0, void 0, function* () {
-            const small_page = t_toggle_page();
+            const small_page = yield this.generateTogglePage();
             const div = tdiv({ id: "wt-serializer" }, small_page.element, h2("Export/Import"));
-            div.id = "wt-serializer";
             div.onclick = () => {
                 const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
                 console.log("[serializer] Exporting: %s", export_string);
