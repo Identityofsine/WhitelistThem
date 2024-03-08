@@ -189,7 +189,7 @@ class Video extends Identifiable {
 
 const SleepSettings = {
 	waiting: 250,
-	engine: 1500,
+	engine: 600,
 	max_attempts: 50,
 };
 

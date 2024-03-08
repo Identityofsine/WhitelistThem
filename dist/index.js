@@ -180,7 +180,7 @@ class Video extends Identifiable {
 //static table
 const SleepSettings = {
     waiting: 250,
-    engine: 1500,
+    engine: 600,
     max_attempts: 50,
 };
 const YoutubeSettings = {
