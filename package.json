@@ -1,0 +1,25 @@
+{
+  "name": "whitelistthem",
+  "version": "2.0.0",
+  "description": "Chrome Extension that filters through allowed channels and allows the user to curate their own experience",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Identityofsine/WhitelistThem.git"
+  },
+  "keywords": [
+    "chrome"
+  ],
+  "author": "IdentityofSine",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Identityofsine/WhitelistThem/issues"
+  },
+  "homepage": "https://github.com/Identityofsine/WhitelistThem#readme",
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  }
+}
