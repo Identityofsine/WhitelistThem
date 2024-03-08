@@ -110,13 +110,12 @@ class Video extends Identifiable {
             }
             else {
                 this.dom.style.display = "block";
-                this.changeInjectionState(this.disabled);
             }
         }
         else {
             this.dom.style.display = "block";
-            this.changeInjectionState(this.disabled);
         }
+        this.changeInjectionState(this.disabled);
     }
     disable() {
         if (this.disabled)
