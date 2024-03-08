@@ -179,8 +179,8 @@ class Video extends Identifiable {
 //static table
 
 const SleepSettings = {
-	waiting: 100,
-	engine: 800,
+	waiting: 250,
+	engine: 900,
 	max_attempts: 50,
 };
 
@@ -268,7 +268,14 @@ const YoutubeSettings = {
 //communicate with service workers
 class MessageHandler {
 	static send(message, callback) {
-		chrome.runtime.sendMessage(message, callback);
+		chrome.runtime.sendMessage(message, (response) => {
+			var lastError = chrome.runtime.lastError;
+			if (lastError) {
+				console.error("[MessageHandler] Error: %s", lastError.message);
+				return;
+			}
+			callback(response);
+		});
 	}
 
 	static addChannel(channel) {
@@ -580,6 +587,29 @@ class ChannelCache {
 	}
 }
 
+class Serializer {
+
+	static stringToBase64(str) {
+		return btoa(str);
+	}
+
+	static importChannels(channels) {
+		//TODO: Import channels
+		console.error("[Serializer] Importing channels not implemented");
+		return undefined;
+	}
+
+	/**
+		* @param {Channel[]} channel_name_dataset
+		* @returns {string} string should be a serialized JSON object that contains the channels
+		*/
+	static exportChannels(channels) {
+		const json_channels = JSON.stringify(channels);
+		return Serializer.stringToBase64(json_channels);
+	}
+
+}
+
 class ChromeExtension {
 	channels = new ChannelCache();
 	static allowed_channels = []; //string
@@ -622,6 +652,16 @@ class ChromeExtension {
 				ChromeExtension.allowed_channels = response.channels;
 			}
 		});
+	}
+
+	static async generateSerializerDiv() {
+		const div = document.createElement("div");
+		div.id = "wt-serializer";
+		div.onclick = () => {
+			console.log("sex");
+		}
+
+		return div;
 	}
 
 	static async generateToggleDiv() {
@@ -685,6 +725,18 @@ class ChromeExtension {
 		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
 		injection_spot.appendChild(toggle_div);
+	}
+
+	async injectSeralizerButton() {
+		const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+		if (!header) return;
+		const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
+		const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
+		if (!buttons_container || !injection_spot) return;
+		const injection_check = injection_spot.querySelector("#wt-serializer");
+		if (injection_check) return;
+		const serializer_div = await ChromeExtension.generateSerializerDiv();
+		injection_spot.appendChild(serializer_div);
 	}
 
 	async getChannelNameFromChannelPage() {
@@ -865,6 +917,7 @@ async function inject(...args) {
 	console.log("[injector] Injecting...");
 	ChromeExtension.page_instance.onVideoRefresh = () => {
 		ce.injectHeader();
+		ce.injectSeralizerButton();
 		ce.injectChannel();
 	}
 
@@ -879,6 +932,8 @@ async function inject(...args) {
 				if (page === "channel" && updated) {
 					ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
 						ce.injectChannel();
+
+						ce.injectSeralizerButton();
 						ce.injectHeader();
 					});
 				}
