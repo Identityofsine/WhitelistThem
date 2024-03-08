@@ -16,7 +16,7 @@
     {
       "matches": ["*://www.youtube.com/*"],
 			"css": ["./src/styles/ytstyles.css"],
-			"js": ["./src/tagger.js","./src/index.js"]
+			"js": ["./dist/tagger.js","./dist/index.js"]
     }
   ]
 }

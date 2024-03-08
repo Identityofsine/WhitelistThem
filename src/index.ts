@@ -1,6 +1,6 @@
 
 class TimeoutError extends Error {
-	constructor(message) {
+	constructor(message: string) {
 		super(message);
 		this.name = "TimeoutError";
 	}
@@ -11,7 +11,7 @@ class Identifiable {
 	id = "";
 	name = "";
 
-	constructor(id, name) {
+	constructor(id: string, name: string) {
 		this.uuid = Identifiable.generateUUID();
 		this.id = id;
 		this.name = name;
@@ -24,24 +24,24 @@ class Identifiable {
 		return uuid;
 	}
 
-	compare(other) {
+	compare(other: Identifiable) {
 		return this.id === other.id;
 	}
 
-	compareUUID(other) {
+	compareUUID(other: Identifiable) {
 		return this.uuid === other.uuid;
 	}
 
 }
 
 class Channel extends Identifiable {
-	videos = [];
+	videos: Video[] = [];
 
-	constructor(id, name) {
+	constructor(id: string, name: string) {
 		super(id, name);
 	}
 
-	doesVideoExist(video) {
+	doesVideoExist(video: Video) {
 		if (video instanceof Video) {
 			const first_search = this.videos.find(v => v.compare(video));
 			if (first_search) return first_search;
@@ -49,7 +49,7 @@ class Channel extends Identifiable {
 		return false;
 	}
 
-	addVideo(video) {
+	addVideo(video: Video) {
 		if (video instanceof Video) {
 			const _video = this.doesVideoExist(video);
 			if (_video) {
@@ -63,7 +63,7 @@ class Channel extends Identifiable {
 	}
 
 	//remove video?
-	removeVideo(video) {
+	removeVideo(video: Video) {
 		if (video instanceof Video) {
 			this.videos = this.videos.filter(v => !v.compare(video));
 		}
@@ -85,19 +85,20 @@ class Channel extends Identifiable {
 
 class Video extends Identifiable {
 	isShort = false;
-	dom = null;
+	dom: HTMLElement | null = null;
 	disabled = false;
 	injected = false;
 
-	constructor(id, name, isShort, dom) {
+	constructor(id: string, name: string, isShort: boolean, dom: HTMLElement) {
 		super(id, name);
 		this.isShort = isShort;
 		this.dom = dom;
 	}
 
-	changeInjectionState(plus) {
+	changeInjectionState(plus: boolean) {
 		if (!this.dom) return;
 		const element = this.dom.querySelector("#whitelist-spot");
+		if (!element) return;
 		if (plus) {
 			element.innerHTML = `<h2>+</h2>`;
 		} else {
@@ -106,6 +107,7 @@ class Video extends Identifiable {
 	}
 
 	refresh() {
+		if (!this.dom) return;
 		if (ChromeExtension.enabled) {
 			if (this.disabled) {
 				this.dom.style.display = "none";
@@ -120,6 +122,7 @@ class Video extends Identifiable {
 
 	disable() {
 		if (this.disabled) return;
+		if (!this.dom) return;
 		if (ChromeExtension.enabled) {
 			this.dom.style.display = "none";
 		}
@@ -130,6 +133,7 @@ class Video extends Identifiable {
 
 	enable() {
 		if (!this.disabled) return;
+		if (!this.dom) return;
 		if (ChromeExtension.enabled) {
 			this.dom.style.display = "block";
 		}
@@ -141,7 +145,8 @@ class Video extends Identifiable {
 	/**
 	 * @param {Channel} channel
 	 */
-	inject(channel) {
+	inject(channel: Channel) {
+		if (!this.dom) return;
 		if (this.dom.dataset.whitelisted) {
 			this.injected = true;
 			return;
@@ -176,7 +181,7 @@ class Video extends Identifiable {
 			onclick_function();
 		}
 		this.dom.appendChild(element);
-		this.dom.dataset.whitelisted = true;
+		this.dom.dataset.whitelisted = 'true';
 	}
 
 }
@@ -269,30 +274,36 @@ const YoutubeSettings = {
 	}
 }
 
+type ChromeMessage = {
+	type: string;
+	channel?: string;
+	enabled?: boolean;
+}
 
 //communicate with service workers
 class MessageHandler {
-	static send(message, callback) {
-		chrome.runtime.sendMessage(message, (response) => {
+	static send(message: ChromeMessage, callback?: Dispatch) {
+		chrome.runtime.sendMessage(message, (response: any) => {
 			var lastError = chrome.runtime.lastError;
 			if (lastError) {
 				console.error("[MessageHandler] Error: %s", lastError.message);
 				return;
 			}
-			callback(response);
+			if (callback)
+				callback(response);
 		});
 	}
 
-	static addChannel(channel) {
+	static addChannel(channel: string) {
 		this.send({ type: "add-channel", channel: channel });
 	}
 
-	static removeChannel(channel) {
+	static removeChannel(channel: string) {
 		this.send({ type: "remove-channel", channel: channel });
 	}
 
-	static onMessage(callback) {
-		chrome.runtime.onMessage.addListener(callback);
+	static onMessage(callback: Function) {
+		chrome.runtime.onMessage.addListener(() => callback());
 	}
 
 }
@@ -301,14 +312,22 @@ class MessageHandler {
 
 //check if page is still loading
 
+type Pages = "home" | "video" | "channel";
+type EngineInstance = {
+	engine: string;
+	page: Pages;
+}
+
+type Dispatch<T = any> = (...value: T[]) => any;
+
 class PageHandler {
 	init = false;
 	page_loaded = false;
 	static engine_running = false;
-	page = "home";
-	engine_instance = [];
-	_onVideoRefresh = [];
-	_onPageLoad = [];
+	page: Pages = "home";
+	engine_instance: EngineInstance[] = [];
+	_onVideoRefresh: Dispatch[] = [];
+	_onPageLoad: Dispatch[] = [];
 
 
 	constructor() {
@@ -316,14 +335,14 @@ class PageHandler {
 	}
 
 	async start() {
-		this.getPage().then((page) => {
+		this.getPage().then((page: Pages) => {
 			this.page = page;
 			console.log("Page: ", this.page);
 			this.pageLoaded();
 		});
 	}
 
-	static craft_engine_instance(instance, page) {
+	static craft_engine_instance(instance: string, page: Pages): EngineInstance {
 		return {
 			engine: instance,
 			page: page
@@ -344,7 +363,7 @@ class PageHandler {
 		return video.length > 0;
 	}
 
-	refreshPage(callback = () => { }) {
+	refreshPage(callback = (_page: Pages, _update: boolean) => { }) {
 		this.getPage().then((page) => {
 			let update = false;
 			if (this.page !== page) {
@@ -358,7 +377,7 @@ class PageHandler {
 		});
 	}
 
-	static async WaitForElement(div_function, indefinite = false) {
+	static async WaitForElement(div_function: () => any, indefinite = false) {
 		let div = div_function();
 		let attempts = 0;
 
@@ -385,7 +404,7 @@ class PageHandler {
 
 			callback();
 
-		} catch (e) {
+		} catch (e: any) {
 			console.error("[inject::header], %s", e.message);
 			return;
 		}
@@ -413,7 +432,7 @@ class PageHandler {
 			});
 			if (another_instance) break;
 
-			this._onVideoRefresh.forEach(async (callback) => {
+			this._onVideoRefresh.forEach(async (callback: Dispatch) => {
 				if (this.page != page) return;
 				callback();
 			});
@@ -437,10 +456,10 @@ class PageHandler {
 		this.engine.bind(this)();
 	}
 
-	async getPage() {
+	async getPage(): Promise<Pages> {
 		return new Promise((resolve, _reject) => {
 			chrome.runtime.sendMessage({ type: "get-page" }, (response) => {
-				resolve(response.page);
+				resolve(response.page as Pages);
 			});
 		});
 	}
@@ -449,23 +468,23 @@ class PageHandler {
 	/**
 	 * @param {Function} callback The callback to be called when a video is refreshed
 	 */
-	set onVideoRefresh(callback = (_page) => { }) {
+	set onVideoRefresh(callback: Dispatch) {
 		this._onVideoRefresh.push(callback);
 	}
 
 	/**
 	 * @param {Function} callback The callback to be called when the page is loaded
 	 */
-	set onPageLoad(callback) {
+	set onPageLoad(callback: Dispatch) {
 		this._onPageLoad.push(callback);
 	}
 
 }
 
 class VideoFactory {
-	static createVideo(video_dom) {
+	static createVideo(video_dom: HTMLElement) {
 
-		function extractVideoId(url) {
+		function extractVideoId(url: string) {
 			var match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
 			return match && match[1];
 		}
@@ -480,14 +499,15 @@ class VideoFactory {
 			}
 
 			for (let i = 0; i < anchor_tags.length; i++) {
-				const anchor = anchor_tags[i];
+				const anchor = anchor_tags[i] as HTMLAnchorElement;
 				if (is_home) {
 					if (anchor.id === YoutubeSettings.home.yt_video_title.id) {
 						return { title: anchor.innerText, id: extractVideoId(anchor.href) };
 					}
 				} else {
 					if (anchor.id === YoutubeSettings.video.yt_video_title.id) {
-						const href = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_link.tag)[0].href;
+						const href_dom = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_link.tag)[0] as HTMLAnchorElement;
+						const href = href_dom.href;
 						return { title: anchor.innerText, id: extractVideoId(href) };
 					}
 				}
@@ -507,19 +527,25 @@ class VideoFactory {
 			for (let i = 0; i < channel_tag.length; i++) {
 				let search;
 				if (is_home)
-					search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
+					search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0] as HTMLAnchorElement;
 				else {
 					const link_container = video_dom.querySelector("#" + YoutubeSettings.video.channel.link.container);
+					if (!link_container) {
+						console.error("[channel] No link container");
+						return { name: '', id: '' };
+					}
+
 					let link_anchor = link_container.getElementsByTagName(YoutubeSettings.video.channel.link.tag);
 					let link = "";
 					for (let i = 0; i < link_anchor.length; i++) {
-						if (link_anchor[i].className === YoutubeSettings.video.channel.link.class) {
-							link = link_anchor[i];
+						const link_dom = link_anchor[i] as HTMLAnchorElement;
+						if (link_dom.className === YoutubeSettings.video.channel.link.class) {
+							link = link_dom.href;
 							break;
 						}
 					}
 
-					search = { innerText: channel_tag[i]?.title, href: link.href };
+					search = { innerText: (channel_tag[i] as HTMLElement)!.title, href: link };
 				}
 
 
@@ -532,12 +558,12 @@ class VideoFactory {
 
 		}
 
-		return { video: new Video(getTitleAndID().id, getTitleAndID().title, false, video_dom), channelname: getChannelName() };
+		return { video: new Video(getTitleAndID().id ?? '', getTitleAndID().title, false, video_dom), channelname: getChannelName() };
 
 	}
 }
 
-async function sleep(callback, timeout) {
+async function sleep(callback: Dispatch, timeout: number) {
 	return new Promise((resolve, _reject) => {
 		setTimeout(() => {
 			resolve(callback());
@@ -546,16 +572,13 @@ async function sleep(callback, timeout) {
 }
 
 class ChannelCache {
-	channels = []; //Channel
+	channels: Channel[] = []; //Channel
 
 	constructor() {
 	}
 
-	get channels() {
-		return this.channel;
-	}
 
-	doesChannelExist(channel) {
+	doesChannelExist(channel: Channel) {
 		if (channel instanceof Channel) {
 			return this.channels.find(c => c.compare(channel));
 		}
@@ -563,7 +586,7 @@ class ChannelCache {
 	}
 
 	//methods
-	addChannel(channel) {
+	addChannel(channel: Channel) {
 		if (channel instanceof Channel) {
 			const _channel = this.doesChannelExist(channel);
 			if (!this.doesChannelExist(channel)) {
@@ -594,7 +617,7 @@ class ChannelCache {
 
 class Serializer {
 
-	static importChannels(channels) {
+	static importChannels(channels: any) {
 		//TODO: Import channels
 		console.error("[Serializer] Importing channels not implemented");
 		return undefined;
@@ -604,30 +627,33 @@ class Serializer {
 		* @param {Channel[]} channel_name_dataset
 		* @returns {string} string should be a serialized JSON object that contains the channels
 		*/
-	static exportChannels(channels) {
+	static exportChannels(channels: string[]) {
 		const json_channels = JSON.stringify(channels);
 		return (json_channels);
 	}
 
 }
 
+interface HTMLChannelElement extends HTMLElement {
+	dataset: {
+		channel: string;
+	}
+}
+
 class ChromeExtension {
 	channels = new ChannelCache();
-	static allowed_channels = []; //string
+	static allowed_channels: string[] = []; //string
 	static page_instance = new PageHandler();
-	static enabled = true;
+	static enabled: boolean = true;
 	searching = false;
 	started = false;
 
-	constructor(allowed_channels) {
+	constructor(allowed_channels: string[]) {
 		ChromeExtension.allowed_channels = allowed_channels;
 		ChromeExtension.page_instance.start();
 		this.start();
 	}
 
-	get channels() {
-		return this.channel;
-	}
 
 	static get currentPage() {
 		return ChromeExtension.page_instance.page;
@@ -635,7 +661,7 @@ class ChromeExtension {
 
 	//methods
 
-	static async getEnabled() {
+	static async getEnabled(): Promise<boolean> {
 		return new Promise((resolve, _reject) => {
 			MessageHandler.send({ type: "get-enabled" }, (response) => {
 				resolve(response.enabled);
@@ -643,7 +669,7 @@ class ChromeExtension {
 		});
 	}
 
-	static setEnabled(enabled) {
+	static setEnabled(enabled: boolean) {
 		MessageHandler.send({ type: "set-enabled", enabled: enabled });
 	}
 
@@ -662,7 +688,6 @@ class ChromeExtension {
 		div.onclick = () => {
 			const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
 			console.log("[serializer] Exporting: %s", export_string);
-			MessageHandler.send({ type: "export-channels", channels: export_string });
 			//copy to clipboard
 			navigator.clipboard.writeText(export_string).then(() => {
 				console.log("[serializer] Copied to clipboard");
@@ -705,7 +730,7 @@ class ChromeExtension {
 		return div;
 	}
 
-	static async generateAddDiv(channel) {
+	static async generateAddDiv(channel: string) {
 		const div = tag("div");
 		div.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
 		div.dataset.channel = channel;
@@ -715,11 +740,12 @@ class ChromeExtension {
 			div.innerHTML = `<h2>Whitelist Channel</h2>`;
 		div.onclick = () => {
 			const channel_name_dataset = div.dataset.channel;
-			if (ChromeExtension.allowed_channels.includes(channel_name_dataset)) {
-				ChromeExtension.removeAllowedChannel(channel_name_dataset);
+			if (!channel_name_dataset) return;
+			if (ChromeExtension.allowed_channels.includes(channel_name_dataset ?? "")) {
+				ChromeExtension.removeAllowedChannel(channel_name_dataset ?? "");
 				div.innerHTML = `<h2>Whitelist Channel</h2>`;
 			} else {
-				ChromeExtension.addAllowedChannel(channel_name_dataset);
+				ChromeExtension.addAllowedChannel(channel_name_dataset ?? "");
 				div.innerHTML = `<h2>Blacklist Channel</h2>`;
 			}
 		}
@@ -750,7 +776,7 @@ class ChromeExtension {
 		injection_spot.appendChild(serializer_div);
 	}
 
-	async getChannelNameFromChannelPage() {
+	async getChannelNameFromChannelPage(): Promise<string | undefined> {
 		if (ChromeExtension.page_instance.page !== "channel") {
 			return;
 		};
@@ -759,7 +785,7 @@ class ChromeExtension {
 			console.log("[channel] No channel container");
 			return;
 		};
-		const channel_tag = channel_container.querySelector(YoutubeSettings.channel.channel.tag);
+		const channel_tag = channel_container.querySelector(YoutubeSettings.channel.channel.tag) as HTMLElement;
 		if (!channel_tag) {
 			console.log("[channel] No channel tag");
 			return;
@@ -769,7 +795,7 @@ class ChromeExtension {
 		return channel_name;
 	}
 
-	async refreshChannelInjection(div, channel_name) {
+	async refreshChannelInjection(div: HTMLChannelElement, channel_name: string) {
 		if (!div) {
 			return;
 		}
@@ -793,7 +819,7 @@ class ChromeExtension {
 		if (ChromeExtension.page_instance.page !== "channel") return;
 
 		const injection_check = document.querySelectorAll("#wt-add");
-		let channel_name = await this.getChannelNameFromChannelPage();
+		let channel_name = await this.getChannelNameFromChannelPage() ?? "";
 
 		if (injection_check.length > 0) {
 			if (injection_check.length >= 2) {
@@ -802,7 +828,8 @@ class ChromeExtension {
 					injection_check[i].remove();
 				}
 			}
-			channel_name = await this.refreshChannelInjection(injection_check?.[0], channel_name);
+			if (!injection_check[0]) return;
+			await this.refreshChannelInjection(injection_check[0] as HTMLChannelElement, channel_name ?? "");
 			return;
 		}
 
@@ -827,7 +854,7 @@ class ChromeExtension {
 		const _deleteShorts = () => {
 			const shorts = document.getElementsByTagName(YoutubeSettings.home.shorts.tag);
 			for (let i = 0; i < shorts.length; i++) {
-				const short = shorts[i];
+				const short = shorts[i] as HTMLElement;
 				short.style.display = "none";
 			}
 		}
@@ -870,7 +897,7 @@ class ChromeExtension {
 						videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
 						const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
 						for (let i = 0; i < circles.length; i++) {
-							const circle = circles[i];
+							const circle = circles[i] as HTMLElement;
 							circle.style.opacity = "0";
 						}
 						break;
@@ -878,7 +905,7 @@ class ChromeExtension {
 						return;
 				}
 				for (let z = 0; z < videos.length; z++) {
-					const video_dom = videos[z];
+					const video_dom = videos[z] as HTMLElement;
 					const videof_obj = VideoFactory.createVideo(video_dom);
 					const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
 					if (_channel)
@@ -904,14 +931,14 @@ class ChromeExtension {
 		this.channels.clearCache();
 	}
 
-	static addAllowedChannel(channel_name) {
+	static addAllowedChannel(channel_name: string) {
 		if (!ChromeExtension.allowed_channels.includes(channel_name)) {
 			ChromeExtension.allowed_channels.push(channel_name);
 			MessageHandler.addChannel(channel_name);
 		}
 	}
 
-	static removeAllowedChannel(channel_name) {
+	static removeAllowedChannel(channel_name: string) {
 		if (ChromeExtension.allowed_channels.includes(channel_name)) {
 			ChromeExtension.allowed_channels.splice(ChromeExtension.allowed_channels.indexOf(channel_name), 1);
 			MessageHandler.removeChannel(channel_name);
@@ -922,7 +949,7 @@ class ChromeExtension {
 
 
 //used by the background script
-async function inject(...args) {
+async function inject(...args: any[]) {
 	const ce = new ChromeExtension([]);
 
 	console.log("[injector] Injecting...");
@@ -958,7 +985,5 @@ async function inject(...args) {
 	return true;
 }
 
-while (true) {
-	if (inject()) break;
-}
+inject();
 
