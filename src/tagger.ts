@@ -2,6 +2,10 @@ console.log('[tagger framework] loaded');
 type Tag = keyof HTMLElementTagNameMap;
 type Attribute = { [key: string]: any };
 
+function flattenString(arr: string[]): string {
+	return arr.join(' ');
+}
+
 function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 	const element = document.createElement(tag);
 
@@ -29,8 +33,9 @@ function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', attr, ...children);
 }
 
-function tflex(attr: Attribute = {}, ...children: HTMLElement[]) {
-	return tag('div', { class: 'flex', ...attr }, ...children);
+type FlexElementProps = "column" | "row" | "align-center" | "align-start" | "align-end" | "justify-center" | "justify-start" | "justify-end" | "justify-between" | "justify-around" | "wrap";
+function tflex(props: FlexElementProps[] = [], attr: Attribute = {}, ...children: HTMLElement[]) {
+	return tag('div', { class: `flex ${flattenString(props)}`, ...attr }, ...children);
 }
 
 type Dispatch<T = any> = ((...value: T[]) => void);

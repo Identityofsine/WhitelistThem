@@ -4,9 +4,9 @@
   "description": "Chrome Extension that filters through allowed channels and allows the user to curate their own experience",
   "main": "index.js",
   "scripts": {
-		"build": "npx tsc && npx sass ./src/styles/ytstyles.scss dist/styles.css && npx sass ./src/styles/tagger.scss dist/tagger.css",
-		"watch-ts": "npx tsc -w",
-		"watch-sass": "npx sass --watch src/styles/:dist/"
+    "build": "npx tsc && npx sass ./src/styles/ytstyles.scss dist/styles.css && npx sass ./src/styles/tagger.scss dist/tagger.css",
+    "watch-ts": "npx tsc -w",
+    "watch-sass": "npx sass --watch src/styles/:dist/"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@types/chrome": "^0.0.263",
+    "@types/firefox-webext-browser": "^120.0.2",
     "sass": "^1.71.1"
   }
 }

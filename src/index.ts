@@ -280,6 +280,13 @@ type ChromeMessage = {
 	enabled?: boolean;
 }
 
+private class Browser {
+	public static get isFirefox() {
+		return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+	}
+
+}
+
 //communicate with service workers
 class MessageHandler {
 	static send(message: ChromeMessage, callback?: Dispatch) {

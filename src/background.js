@@ -7,8 +7,23 @@ function debugPrint(text) {
 	console.log("-".repeat(20));
 }
 
+class Browser {
+	static get browser_instance() {
+		//check if browser is chrome or firefox	
+		if (typeof browser !== 'undefined') {
+			console.log("Welcome Firefox!");
+			return browser;
+		}
+		if (typeof chrome !== 'undefined') {
+			console.log("Welcome Chrome!");
+			return chrome;
+		}
+		throw new Error('No browser instance found');
+	}
+}
+
 class Storage {
-	static storage = browser.storage.sync;
+	static storage = Browser.browser_instance.storage.sync;
 
 	static async createIfNotExists(key, init_value) {
 		return new Promise((resolve, _reject) => {
@@ -72,10 +87,10 @@ async function getChannels() {
 
 async function getTab(tabIndex) {
 	let queryOptions = { active: true, currentWindow: true, index: tabIndex };
-	let tabs = await browser.tabs.query(queryOptions);
+	let tabs = await Browser.browser_instance.tabs.query(queryOptions);
 	let MAX_ATTEMPTS = 100;
 	while (tabs.length === 0 && MAX_ATTEMPTS > 0) {
-		tabs = await browser.tabs.query(queryOptions);
+		tabs = await Browser.browser_instance.tabs.query(queryOptions);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		MAX_ATTEMPTS--;
 	}
@@ -107,9 +122,9 @@ function determinePageType(url) {
 
 
 //send message to content script to refresh -- called when site is changed or updated
-browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+Browser.browser_instance.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 	if (changeInfo.status === "complete") {
-		browser.tabs.sendMessage(tab.id, { type: "update" });
+		Browser.browser_instance.tabs.sendMessage(tab.id, { type: "update" });
 	}
 });
 
@@ -117,7 +132,7 @@ browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 
 
 //recieve message from content script
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "add-channel") {
 		Storage.get("channels").then((result) => {
 			let channels = result.channels;
@@ -134,7 +149,7 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //recieve message from content script
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "remove-channel") {
 		Storage.get("channels").then((result) => {
 			let channels = result.channels;
@@ -149,7 +164,7 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //recieve message from channels 
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-channels") {
 		getChannels().then((result) => {
 			console.log("Sending channels: ", result.channels);
@@ -160,7 +175,7 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 });
 
 //return current page (home or video)
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-page") {
 		//get tab id
 		const tabIndex = _sender.tab.index;
@@ -172,7 +187,7 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	}
 });
 
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "get-enabled") {
 		Storage.get("enabled").then((result) => {
 			_sendResponse({ type: "query-enabled", enabled: result.enabled });
@@ -182,7 +197,7 @@ browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	}
 });
 
-browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+Browser.browser_instance.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 	if (request.type === "set-enabled") {
 		Storage.set("enabled", request.enabled ?? true);
 		console.log("Setting enabled to: ", request.enabled);
