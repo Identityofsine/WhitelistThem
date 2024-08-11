@@ -194,7 +194,7 @@ const SleepSettings = {
 
 const YoutubeSettings = {
 	home: {
-		container: "ytd-rich-grid-row",
+		container: "ytd-rich-grid-renderer",
 		yt_video: "ytd-rich-item-renderer",
 		yt_video_title: {
 			tag: "a",
@@ -283,14 +283,23 @@ class Browser {
 	public static get isFirefox() {
 		return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
 	}
-
+	public static get browser(): any | undefined {
+		// @ts-ignore
+		if (chrome) {
+			// @ts-ignore
+			return chrome;
+		} else {
+			// @ts-ignore
+			return browser;
+		}
+	}
 }
 
 //communicate with service workers
 class MessageHandler {
 	static send(message: ChromeMessage, callback?: Dispatch) {
-		chrome.runtime.sendMessage(message, (response: any) => {
-			var lastError = chrome.runtime.lastError;
+		Browser.browser.runtime.sendMessage(message, (response: any) => {
+			var lastError = Browser.browser.runtime.lastError;
 			if (lastError) {
 				console.error("[MessageHandler] Error: %s", lastError.message);
 				return;
@@ -309,7 +318,7 @@ class MessageHandler {
 	}
 
 	static onMessage(callback: Function) {
-		chrome.runtime.onMessage.addListener(() => callback());
+		Browser.browser.runtime.onMessage.addListener(() => callback());
 	}
 
 }
@@ -462,7 +471,8 @@ class PageHandler {
 
 	async getPage(): Promise<Pages> {
 		return new Promise((resolve, _reject) => {
-			chrome.runtime.sendMessage({ type: "get-page" }, (response) => {
+			//@ts-ignore
+			Browser.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
 				resolve(response.page as Pages);
 			});
 		});
@@ -1026,7 +1036,8 @@ async function inject(...args: any[]) {
 	ce.deleteShorts();
 
 	//run chrome listener on update, and check the page
-	chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+	//@ts-ignore
+	Browser.browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
 		if (request.type === "update") {
 			ChromeExtension.page_instance.refreshPage((page, updated) => {
 				if (page === "channel" && updated) {
@@ -1042,7 +1053,6 @@ async function inject(...args: any[]) {
 			ce.refreshCache();
 		}
 	});
-
 
 
 	return true;

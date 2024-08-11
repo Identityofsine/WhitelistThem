@@ -184,7 +184,7 @@ const SleepSettings = {
 };
 const YoutubeSettings = {
     home: {
-        container: "ytd-rich-grid-row",
+        container: "ytd-rich-grid-renderer",
         yt_video: "ytd-rich-item-renderer",
         yt_video_title: {
             tag: "a",
@@ -265,12 +265,23 @@ class Browser {
     static get isFirefox() {
         return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
     }
+    static get browser() {
+        // @ts-ignore
+        if (chrome) {
+            // @ts-ignore
+            return chrome;
+        }
+        else {
+            // @ts-ignore
+            return browser;
+        }
+    }
 }
 //communicate with service workers
 class MessageHandler {
     static send(message, callback) {
-        chrome.runtime.sendMessage(message, (response) => {
-            var lastError = chrome.runtime.lastError;
+        Browser.browser.runtime.sendMessage(message, (response) => {
+            var lastError = Browser.browser.runtime.lastError;
             if (lastError) {
                 console.error("[MessageHandler] Error: %s", lastError.message);
                 return;
@@ -286,7 +297,7 @@ class MessageHandler {
         this.send({ type: "remove-channel", channel: channel });
     }
     static onMessage(callback) {
-        chrome.runtime.onMessage.addListener(() => callback());
+        Browser.browser.runtime.onMessage.addListener(() => callback());
     }
 }
 class PageHandler {
@@ -423,7 +434,8 @@ class PageHandler {
     getPage() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, _reject) => {
-                chrome.runtime.sendMessage({ type: "get-page" }, (response) => {
+                //@ts-ignore
+                Browser.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
                     resolve(response.page);
                 });
             });
@@ -950,7 +962,8 @@ function inject(...args) {
         ce.startVideoDisableLoop();
         ce.deleteShorts();
         //run chrome listener on update, and check the page
-        chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+        //@ts-ignore
+        Browser.browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
             if (request.type === "update") {
                 ChromeExtension.page_instance.refreshPage((page, updated) => {
                     if (page === "channel" && updated) {
