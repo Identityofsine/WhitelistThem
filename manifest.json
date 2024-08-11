@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Whitelist",
-  "version": "2.0",
+  "version": "2.1",
   "description": "Cater your YouTube experience to what you need.",
 	"browser_specific_settings": {
 		"gecko": {
 			"id": "{48f8037a-bf52-4f12-8302-e6f923e9a898}",
-			"strict_min_version": "48.0"
+			"strict_min_version": "58.0"
 		}
 	},
   "permissions": [
