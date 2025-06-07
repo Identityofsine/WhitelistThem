@@ -1,23 +1,27 @@
 {
   "manifest_version": 3,
   "name": "Whitelist",
-  "version": "2.0",
+  "version": "2.1",
   "description": "Cater your YouTube experience to what you need.",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "{48f8037a-bf52-4f12-8302-e6f923e9a898}",
+			"strict_min_version": "58.0"
+		}
+	},
   "permissions": [
 		"tabs",
     "activeTab",
     "storage"
   ],
 	"background" : {
-		"service_worker": "./src/background.js",
-		"type": "module"
+		"scripts": ["./background.js"]
 	},
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*"],
-			"css": ["./src/styles/ytstyles.css"],
-			"css": ["./dist/styles.css", "./dist/tagger.css"],
-			"js": ["./dist/tagger.js","./dist/index.js"]
+			"css": ["./index.css"],
+			"js": ["./index.js"]
     }
   ]
 }

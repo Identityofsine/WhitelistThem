@@ -4,9 +4,11 @@
   "description": "Chrome Extension that filters through allowed channels and allows the user to curate their own experience",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc && npx sass ./src/styles/styles.scss dist/styles.css && npx sass ./src/styles/tagger.scss dist/tagger.css",
-    "watch-ts": "npx tsc -w",
-    "watch-sass": "npx sass --watch src/styles/:dist/"
+    "lint": "eslint 'src/**/*.ts'",
+    "build": "node build.js --target=chrome",
+    "watch": "node build.js --target=chrome --watch",
+    "build:firefox": "node build.js --target=firefox",
+    "watch:firefox": "node build.js --target=firefox --watch"
   },
   "repository": {
     "type": "git",
@@ -22,11 +24,24 @@
   },
   "homepage": "https://github.com/Identityofsine/WhitelistThem#readme",
   "devDependencies": {
-    "typescript": "^5.4.2"
+    "@eslint/js": "^9.28.0",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "chokidar": "^4.0.3",
+    "esbuild": "^0.25.5",
+    "esbuild-sass-plugin": "^3.3.1",
+    "eslint": "^9.28.0",
+    "eslint-import-resolver-node": "^0.3.9",
+    "eslint-import-resolver-typescript": "^4.4.3",
+    "eslint-plugin-import": "^2.31.0",
+    "globals": "^16.2.0",
+    "sass": "^1.89.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.1",
+    "@antfu/eslint-config": "^4.14.1"
   },
   "dependencies": {
     "@types/chrome": "^0.0.263",
-    "@types/firefox-webext-browser": "^120.0.2",
-    "sass": "^1.71.1"
+    "@types/firefox-webext-browser": "^120.0.2"
   }
 }

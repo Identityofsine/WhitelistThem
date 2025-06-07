@@ -103,103 +103,8 @@
     }
   };
 
-  // src/framework/tagger.ts
-  console.log("[tagger framework] loaded");
-  var Updater = class _Updater {
-    constructor() {
-      this.events = [];
-    }
-    static getInstance() {
-      if (!_Updater.instance) {
-        _Updater.instance = new _Updater();
-      }
-      return _Updater.instance;
-    }
-    registerEvent(event) {
-      this.events.push(event);
-    }
-    update() {
-      this.events.forEach((event) => {
-        event();
-      });
-    }
-  };
-  function createState(initialState) {
-    let state = initialState;
-    const setState = (newState) => {
-      state = newState;
-      Updater.getInstance().update();
-    };
-    return { state: () => state, setState };
-  }
-  function flattenString(arr) {
-    return arr.join(" ");
-  }
-  function tag(tag2, attr = {}, ...children) {
-    const element = document.createElement(tag2);
-    if (attr) {
-      Object.keys(attr).forEach((key) => {
-        element.setAttribute(key, attr[key]);
-      });
-      element.classList.add("tag");
-    }
-    if (children) {
-      children.forEach((child) => {
-        element.appendChild(child);
-      });
-    }
-    return element;
-  }
-  function th2(text, attr = {}) {
-    return tag("h2", __spreadValues({}, attr), document.createTextNode(text));
-  }
-  function tdiv(attr = {}, ...children) {
-    return tag("div", attr, ...children);
-  }
-  function tinput(props, placeHolder = "", defaultValue = "", onValueChange, className = "", attr = {}) {
-    const state = createState(defaultValue);
-    const input = tag("input", __spreadValues({ type: props, placeholder: placeHolder, class: className }, attr));
-    input.value = defaultValue;
-    input.addEventListener("input", (_) => {
-      onValueChange && onValueChange(state.state());
-      state.setState(input.value);
-    });
-    function update() {
-      input.value = state.state();
-    }
-    Updater.getInstance().registerEvent(update);
-    return { input, state };
-  }
-  function tbutton(onclick, text, className = "", attr = {}, ...children) {
-    const button = tag("button", __spreadValues({ class: className }, attr), ...children);
-    button.appendChild(document.createTextNode(text));
-    button.onclick = (e) => {
-      e.preventDefault();
-      onclick();
-    };
-    return button;
-  }
-  function tflex(props = [], className = "", attr = {}, ...children) {
-    return tag("div", __spreadValues({ class: `flex ${flattenString(props)} ${className}` }, attr), ...children);
-  }
-  function t_toggle_page(className = "", attr = {}, ...children) {
-    const container = tdiv(__spreadValues({ class: `toggle-page ${className}` }, attr), ...children);
-    container.onclick = (e) => {
-      e.stopPropagation();
-    };
-    function toggle() {
-      if (container.classList.contains("open")) {
-        container.classList.remove("open");
-        return;
-      } else {
-        container.classList.add("open");
-      }
-    }
-    return { element: container, toggle };
-  }
-
   // src/interfaces/browser.ts
-  var Browser = class {
+  var Browser2 = class {
     static get isFirefox() {
       return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
     }
@@ -215,8 +120,8 @@
   // src/handler/messagehandler.ts
   var MessageHandler = class {
     static send(message, callback) {
-      Browser.browser.runtime.sendMessage(message, (response) => {
-        var lastError = Browser.browser.runtime.lastError;
+      Browser2.browser.runtime.sendMessage(message, (response) => {
+        var lastError = Browser2.browser.runtime.lastError;
         if (lastError) {
           console.error("[MessageHandler] Error: %s", lastError.message);
           return;
@@ -232,7 +137,7 @@
       this.send({ type: "remove-channel", channel });
     }
     static onMessage(callback) {
-      Browser.browser.runtime.onMessage.addListener(() => callback());
+      Browser2.browser.runtime.onMessage.addListener(() => callback());
     }
   };
 
@@ -419,163 +324,100 @@
     }
   };
 
-  // src/error/timeout.ts
-  var TimeoutError = class extends Error {
-    constructor(message) {
-      super(message);
-      this.name = "TimeoutError";
-    }
-  };
-
-  // src/util/sleep.ts
-  async function sleep(callback, timeout) {
-    return new Promise((resolve, _reject) => {
-      setTimeout(() => {
-        resolve(callback());
-      }, timeout);
-    });
-  }
-
-  // src/handler/pagehandler.ts
-  var _PageHandler = class _PageHandler {
+  // src/framework/tagger.ts
+  console.log("[tagger framework] loaded");
+  var Updater = class _Updater {
     constructor() {
-      this.init = false;
-      this.page_loaded = false;
-      this.page = "home";
-      this.engine_instance = [];
-      this._onVideoRefresh = [];
-      this._onPageLoad = [];
+      this.events = [];
     }
-    async start() {
-      this.getPage().then((page) => {
-        this.page = page;
-        console.log("Page: ", this.page);
-        this.pageLoaded();
+    static getInstance() {
+      if (!_Updater.instance) {
+        _Updater.instance = new _Updater();
+      }
+      return _Updater.instance;
+    }
+    registerEvent(event) {
+      this.events.push(event);
+    }
+    update() {
+      this.events.forEach((event) => {
+        event();
       });
-    }
-    static craft_engine_instance(instance, page) {
-      return {
-        engine: instance,
-        page
-      };
-    }
-    isPageLoading() {
-      return !this.page_loaded;
-    }
-    isVideoOnPage() {
-      let video;
-      if (this.page === "home")
-        video = document.getElementsByTagName(YoutubeSettings.home.yt_video);
-      else
-        video = document.getElementsByTagName(YoutubeSettings.video.yt_video);
-      return video.length > 0;
-    }
-    refreshPage(callback = (_page, _update) => {
-    }) {
-      this.getPage().then((page) => {
-        let update = false;
-        if (this.page !== page) {
-          update = true;
-          _PageHandler.engine_running = false;
-          this.page_loaded = false;
-          this.page = page;
-          this.pageLoaded();
-        }
-        callback(page, update);
-      });
-    }
-    static async WaitForElement(div_function, indefinite = false) {
-      let div = div_function();
-      let attempts = 0;
-      while (!div) {
-        if (attempts >= SleepSettings.max_attempts && !indefinite) {
-          break;
-        }
-        await sleep(() => {
-          attempts++;
-        }, SleepSettings.waiting);
-        div = div_function();
-      }
-      if (attempts >= SleepSettings.max_attempts) {
-        console.error("[WT] Can't find element, I'm giving up...");
-        throw new TimeoutError("Can't find element");
-      } else
-        return div;
-    }
-    async WaitUntilHeaderLoaded(callback = () => {
-    }) {
-      try {
-        let header_container = await _PageHandler.WaitForElement(() => document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0]);
-        await _PageHandler.WaitForElement(() => header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id));
-        callback();
-      } catch (e) {
-        console.error("[inject::header], %s", e.message);
-        return;
-      }
-    }
-    async engine() {
-      const loop_id = Identifiable.generateUUID();
-      const page = this.page;
-      if (_PageHandler.engine_running) {
-        console.log("[%s] Engine already running (%s)", page, loop_id);
-        return;
-      } else {
-        console.log("[%s] Engine not running (%s)", page, loop_id);
-      }
-      _PageHandler.engine_running = true;
-      this.engine_instance.push(_PageHandler.craft_engine_instance(loop_id, page));
-      console.log("[%s] Engine started (%s)", page, loop_id);
-      while (this.page_loaded) {
-        if (this.page != page) break;
-        let another_instance = false;
-        this.engine_instance.forEach((instance) => {
-          if (instance.engine != loop_id && instance.page == page) another_instance = true;
-        });
-        if (another_instance) break;
-        this._onVideoRefresh.forEach(async (callback) => {
-          if (this.page != page) return;
-          callback();
-        });
-        await sleep(() => {
-        }, SleepSettings.engine);
-      }
-      this.engine_instance = this.engine_instance.filter((instance) => instance.engine != loop_id);
-      console.log("[%s]Engine stopped (%s)", page, loop_id);
-    }
-    async pageLoaded() {
-      if (ChromeExtension.currentPage == "channel") {
-        await _PageHandler.WaitForElement(() => document.querySelector(YoutubeSettings.channel.channel.tag), true);
-      } else {
-        await _PageHandler.WaitForElement(() => this.isVideoOnPage(), true);
-      }
-      this.page_loaded = true;
-      this._onPageLoad.forEach((callback) => {
-        callback();
-      });
-      this.engine.bind(this)();
-    }
-    async getPage() {
-      return new Promise((resolve, _reject) => {
-        Browser.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
-          resolve(response.page);
-        });
-      });
-    }
-    /**
-     * @param {Function} callback The callback to be called when a video is refreshed
-     */
-    set onVideoRefresh(callback) {
-      this._onVideoRefresh.push(callback);
-    }
-    /**
-     * @param {Function} callback The callback to be called when the page is loaded
-     */
-    set onPageLoad(callback) {
-      this._onPageLoad.push(callback);
     }
   };
-  _PageHandler.engine_running = false;
-  var PageHandler = _PageHandler;
+  function createState(initialState) {
+    let state = initialState;
+    const setState = (newState) => {
+      state = newState;
+      Updater.getInstance().update();
+    };
+    return { state: () => state, setState };
+  }
+  function flattenString(arr) {
+    return arr.join(" ");
+  }
+  function tag(tag2, attr = {}, ...children) {
+    const element = document.createElement(tag2);
+    if (attr) {
+      Object.keys(attr).forEach((key) => {
+        element.setAttribute(key, attr[key]);
+      });
+      element.classList.add("tag");
+    }
+    if (children) {
+      children.forEach((child) => {
+        element.appendChild(child);
+      });
+    }
+    return element;
+  }
+  function th2(text, attr = {}) {
+    return tag("h2", __spreadValues({}, attr), document.createTextNode(text));
+  }
+  function tdiv2(attr = {}, ...children) {
+    return tag("div", attr, ...children);
+  }
+  function tinput(props, placeHolder = "", defaultValue = "", onValueChange, className = "", attr = {}) {
+    const state = createState(defaultValue);
+    const input = tag("input", __spreadValues({ type: props, placeholder: placeHolder, class: className }, attr));
+    input.value = defaultValue;
+    input.addEventListener("input", (_) => {
+      onValueChange && onValueChange(state.state());
+      state.setState(input.value);
+    });
+    function update() {
+      input.value = state.state();
+    }
+    Updater.getInstance().registerEvent(update);
+    return { input, state };
+  }
+  function tbutton(onclick, text, className = "", attr = {}, ...children) {
+    const button = tag("button", __spreadValues({ class: className }, attr), ...children);
+    button.appendChild(document.createTextNode(text));
+    button.onclick = (e) => {
+      e.preventDefault();
+      onclick();
+    };
+    return button;
+  }
+  function tflex(props = [], className = "", attr = {}, ...children) {
+    return tag("div", __spreadValues({ class: `flex ${flattenString(props)} ${className}` }, attr), ...children);
+  }
+  function t_toggle_page(className = "", attr = {}, ...children) {
+    const container = tdiv2(__spreadValues({ class: `toggle-page ${className}` }, attr), ...children);
+    container.onclick = (e) => {
+      e.stopPropagation();
+    };
+    function toggle() {
+      if (container.classList.contains("open")) {
+        container.classList.remove("open");
+        return;
+      } else {
+        container.classList.add("open");
+      }
+    }
+    return { element: container, toggle };
+  }
 
   // src/object/channel.ts
   var Channel = class extends Identifiable {
@@ -748,14 +590,14 @@
     }
     static async generateSerializerDiv() {
       const small_page = await this.generateTogglePage();
-      const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
+      const div = tdiv2({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
       div.onclick = () => {
         small_page.toggle();
       };
       return div;
     }
     static async generateToggleDiv() {
-      const div = tdiv({ id: "wt-toggle" });
+      const div = tdiv2({ id: "wt-toggle" });
       _ChromeExtension.enabled = await _ChromeExtension.getEnabled();
       if (_ChromeExtension.enabled) {
         div.innerHTML = `<h2>Enabled</h2>`;
@@ -778,7 +620,7 @@
       return div;
     }
     static async generateAddDiv(channel) {
-      const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel } });
+      const div = tdiv2({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel } });
       if (_ChromeExtension.allowed_channels.includes(channel))
         div.innerHTML = `<h2>Blacklist Channel</h2>`;
       else
@@ -1022,5 +864,163 @@
     return true;
   }
   inject();
+
+  // src/error/timeout.ts
+  var TimeoutError = class extends Error {
+    constructor(message) {
+      super(message);
+      this.name = "TimeoutError";
+    }
+  };
+
+  // src/util/sleep.ts
+  async function sleep(callback, timeout) {
+    return new Promise((resolve, _reject) => {
+      setTimeout(() => {
+        resolve(callback());
+      }, timeout);
+    });
+  }
+
+  // src/handler/pagehandler.ts
+  var _PageHandler = class _PageHandler {
+    constructor() {
+      this.init = false;
+      this.page_loaded = false;
+      this.page = "home";
+      this.engine_instance = [];
+      this._onVideoRefresh = [];
+      this._onPageLoad = [];
+    }
+    async start() {
+      this.getPage().then((page) => {
+        this.page = page;
+        console.log("Page: ", this.page);
+        this.pageLoaded();
+      });
+    }
+    static craft_engine_instance(instance, page) {
+      return {
+        engine: instance,
+        page
+      };
+    }
+    isPageLoading() {
+      return !this.page_loaded;
+    }
+    isVideoOnPage() {
+      let video;
+      if (this.page === "home")
+        video = document.getElementsByTagName(YoutubeSettings.home.yt_video);
+      else
+        video = document.getElementsByTagName(YoutubeSettings.video.yt_video);
+      return video.length > 0;
+    }
+    refreshPage(callback = (_page, _update) => {
+    }) {
+      this.getPage().then((page) => {
+        let update = false;
+        if (this.page !== page) {
+          update = true;
+          _PageHandler.engine_running = false;
+          this.page_loaded = false;
+          this.page = page;
+          this.pageLoaded();
+        }
+        callback(page, update);
+      });
+    }
+    static async WaitForElement(div_function, indefinite = false) {
+      let div = div_function();
+      let attempts = 0;
+      while (!div) {
+        if (attempts >= SleepSettings.max_attempts && !indefinite) {
+          break;
+        }
+        await sleep(() => {
+          attempts++;
+        }, SleepSettings.waiting);
+        div = div_function();
+      }
+      if (attempts >= SleepSettings.max_attempts) {
+        console.error("[WT] Can't find element, I'm giving up...");
+        throw new TimeoutError("Can't find element");
+      } else
+        return div;
+    }
+    async WaitUntilHeaderLoaded(callback = () => {
+    }) {
+      try {
+        let header_container = await _PageHandler.WaitForElement(() => document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0]);
+        await _PageHandler.WaitForElement(() => header_container.querySelector("#" + YoutubeSettings.generic.header.buttons.id));
+        callback();
+      } catch (e) {
+        console.error("[inject::header], %s", e.message);
+        return;
+      }
+    }
+    async engine() {
+      const loop_id = Identifiable.generateUUID();
+      const page = this.page;
+      if (_PageHandler.engine_running) {
+        console.log("[%s] Engine already running (%s)", page, loop_id);
+        return;
+      } else {
+        console.log("[%s] Engine not running (%s)", page, loop_id);
+      }
+      _PageHandler.engine_running = true;
+      this.engine_instance.push(_PageHandler.craft_engine_instance(loop_id, page));
+      console.log("[%s] Engine started (%s)", page, loop_id);
+      while (this.page_loaded) {
+        if (this.page != page) break;
+        let another_instance = false;
+        this.engine_instance.forEach((instance) => {
+          if (instance.engine != loop_id && instance.page == page) another_instance = true;
+        });
+        if (another_instance) break;
+        this._onVideoRefresh.forEach(async (callback) => {
+          if (this.page != page) return;
+          callback();
+        });
+        await sleep(() => {
+        }, SleepSettings.engine);
+      }
+      this.engine_instance = this.engine_instance.filter((instance) => instance.engine != loop_id);
+      console.log("[%s]Engine stopped (%s)", page, loop_id);
+    }
+    async pageLoaded() {
+      if (ChromeExtension.currentPage == "channel") {
+        await _PageHandler.WaitForElement(() => document.querySelector(YoutubeSettings.channel.channel.tag), true);
+      } else {
+        await _PageHandler.WaitForElement(() => this.isVideoOnPage(), true);
+      }
+      this.page_loaded = true;
+      this._onPageLoad.forEach((callback) => {
+        callback();
+      });
+      this.engine.bind(this)();
+    }
+    async getPage() {
+      return new Promise((resolve, _reject) => {
+        Browser2.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
+          resolve(response.page);
+        });
+      });
+    }
+    /**
+     * @param {Function} callback The callback to be called when a video is refreshed
+     */
+    set onVideoRefresh(callback) {
+      this._onVideoRefresh.push(callback);
+    }
+    /**
+     * @param {Function} callback The callback to be called when the page is loaded
+     */
+    set onPageLoad(callback) {
+      this._onPageLoad.push(callback);
+    }
+  };
+  _PageHandler.engine_running = false;
+  var PageHandler = _PageHandler;
 })();
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=pagehandler.js.map

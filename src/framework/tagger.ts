@@ -1,14 +1,14 @@
 console.log('[tagger framework] loaded');
-type Tag = keyof HTMLElementTagNameMap;
-type Attribute = { [key: string]: any };
+export type Tag = keyof HTMLElementTagNameMap;
+export type Attribute = { [key: string]: any };
 
 
-type State<T> = {
+export type State<T> = {
 	state: DispatchWithResult<void, T>;
 	setState: Dispatch<T>;
 }
 
-class Updater {
+export class Updater {
 	private static instance: Updater;
 	private events: Dispatch[] = [];
 
@@ -31,7 +31,7 @@ class Updater {
 	}
 }
 
-function createState<T>(initialState: T): State<T> {
+export function createState<T>(initialState: T): State<T> {
 	let state = initialState;
 	const setState = (newState: T) => {
 		state = newState;
@@ -41,11 +41,11 @@ function createState<T>(initialState: T): State<T> {
 }
 
 
-function flattenString(arr: string[]): string {
+export function flattenString(arr: string[]): string {
 	return arr.join(' ');
 }
 
-function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
+export function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 	const element = document.createElement(tag);
 
 	if (attr) {
@@ -64,22 +64,22 @@ function tag(tag: Tag, attr: Attribute = {}, ...children: HTMLElement[]) {
 	return element;
 }
 
-function th2(text: string, attr: Attribute = {}) {
+export function th2(text: string, attr: Attribute = {}) {
 	return tag('h2', { ...attr }, document.createTextNode(text) as any);
 }
 
-function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
+export function tdiv(attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', attr, ...children);
 }
 
 type InputElementProps = "text" | "password" | "checkbox" | "radio" | "submit" | "reset" | "file" | "hidden" | "image" | "button";
 
 
-function tinput(props: InputElementProps, placeHolder: string = "", defaultValue: string = "", onValueChange?: Dispatch<string>, className: string = "", attr: Attribute = {}) {
+export function tinput(props: InputElementProps, placeHolder: string = "", defaultValue: string = "", onValueChange?: Dispatch<string>, className: string = "", attr: Attribute = {}) {
 	const state: State<string> = createState(defaultValue);
 	const input = tag('input', { type: props, placeholder: placeHolder, class: className, ...attr }) as HTMLInputElement;
 	input.value = defaultValue;
-	input.addEventListener("input", (e: Event) => {
+	input.addEventListener("input", (_: Event) => {
 		onValueChange && onValueChange(state.state());
 		state.setState(input.value);
 	})
@@ -90,7 +90,7 @@ function tinput(props: InputElementProps, placeHolder: string = "", defaultValue
 	return { input, state };
 }
 
-function tbutton(onclick: Dispatch, text: string, className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
+export function tbutton(onclick: Dispatch, text: string, className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
 	const button = tag('button', { class: className, ...attr }, ...children);
 	button.appendChild(document.createTextNode(text));
 	button.onclick = (e) => {
@@ -100,15 +100,15 @@ function tbutton(onclick: Dispatch, text: string, className: string = "", attr: 
 	return button;
 }
 
-type FlexElementProps = "column" | "row" | "align-center" | "align-start" | "align-end" | "justify-center" | "justify-start" | "justify-end" | "justify-between" | "justify-around" | "wrap";
-function tflex(props: FlexElementProps[] = [], className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
+export type FlexElementProps = "column" | "row" | "align-center" | "align-start" | "align-end" | "justify-center" | "justify-start" | "justify-end" | "justify-between" | "justify-around" | "wrap";
+export function tflex(props: FlexElementProps[] = [], className: string = "", attr: Attribute = {}, ...children: HTMLElement[]) {
 	return tag('div', { class: `flex ${flattenString(props)} ${className}`, ...attr }, ...children);
 }
 
-type Dispatch<T = any> = ((...value: T[]) => void);
-type DispatchWithResult<A = any, R = any> = ((...value: A[]) => R);
+export type Dispatch<T = any> = ((...value: T[]) => void);
+export type DispatchWithResult<A = any, R = any> = ((...value: A[]) => R);
 
-function t_toggle_page(className: string = "", attr: Attribute = {}, ...children: HTMLElement[]): { element: HTMLElement, toggle: Dispatch } {
+export function t_toggle_page(className: string = "", attr: Attribute = {}, ...children: HTMLElement[]): { element: HTMLElement, toggle: Dispatch } {
 
 	const container = tdiv({ class: `toggle-page ${className}`, ...attr }, ...children);
 	container.onclick = (e: MouseEvent) => {

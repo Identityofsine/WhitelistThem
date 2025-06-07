@@ -15,13 +15,13 @@
     "storage"
   ],
 	"background" : {
-		"scripts": ["./src/background.js"]
+		"scripts": ["./background.js"]
 	},
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*"],
-			"css": ["./dist/styles.css", "./dist/tagger.css"],
-			"js": ["./dist/tagger.js","./dist/index.js"]
+			"css": ["./index.css"],
+			"js": ["./index.js"]
     }
   ]
 }

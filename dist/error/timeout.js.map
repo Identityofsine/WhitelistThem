@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/error/timeout.ts"],
+  "sourcesContent": ["export class TimeoutError extends Error {\n\tconstructor(message: string) {\n\t\tsuper(message);\n\t\tthis.name = \"TimeoutError\";\n\t}\n}\n"],
+  "mappings": ";;;AAAO,MAAM,eAAN,cAA2B,MAAM;AAAA,IACvC,YAAY,SAAiB;AAC5B,YAAM,OAAO;AACb,WAAK,OAAO;AAAA,IACb;AAAA,EACD;",
+  "names": []
+}

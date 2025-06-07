@@ -153,7 +153,7 @@
   function th2(text, attr = {}) {
     return tag("h2", __spreadValues({}, attr), document.createTextNode(text));
   }
-  function tdiv(attr = {}, ...children) {
+  function tdiv2(attr = {}, ...children) {
     return tag("div", attr, ...children);
   }
   function tinput(props, placeHolder = "", defaultValue = "", onValueChange, className = "", attr = {}) {
@@ -183,7 +183,7 @@
     return tag("div", __spreadValues({ class: `flex ${flattenString(props)} ${className}` }, attr), ...children);
   }
   function t_toggle_page(className = "", attr = {}, ...children) {
-    const container = tdiv(__spreadValues({ class: `toggle-page ${className}` }, attr), ...children);
+    const container = tdiv2(__spreadValues({ class: `toggle-page ${className}` }, attr), ...children);
     container.onclick = (e) => {
       e.stopPropagation();
     };
@@ -199,7 +199,7 @@
   }
 
   // src/interfaces/browser.ts
-  var Browser = class {
+  var Browser2 = class {
     static get isFirefox() {
       return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
     }
@@ -215,8 +215,8 @@
   // src/handler/messagehandler.ts
   var MessageHandler = class {
     static send(message, callback) {
-      Browser.browser.runtime.sendMessage(message, (response) => {
-        var lastError = Browser.browser.runtime.lastError;
+      Browser2.browser.runtime.sendMessage(message, (response) => {
+        var lastError = Browser2.browser.runtime.lastError;
         if (lastError) {
           console.error("[MessageHandler] Error: %s", lastError.message);
           return;
@@ -232,9 +232,26 @@
       this.send({ type: "remove-channel", channel });
     }
     static onMessage(callback) {
-      Browser.browser.runtime.onMessage.addListener(() => callback());
+      Browser2.browser.runtime.onMessage.addListener(() => callback());
     }
   };
+
+  // src/error/timeout.ts
+  var TimeoutError = class extends Error {
+    constructor(message) {
+      super(message);
+      this.name = "TimeoutError";
+    }
+  };
+
+  // src/util/sleep.ts
+  async function sleep(callback, timeout) {
+    return new Promise((resolve, _reject) => {
+      setTimeout(() => {
+        resolve(callback());
+      }, timeout);
+    });
+  }
 
   // src/object/abstract/identifiable.ts
   var Identifiable = class _Identifiable {
@@ -259,182 +276,6 @@
       return this.uuid === other.uuid;
     }
   };
-
-  // src/object/video.ts
-  var Video = class extends Identifiable {
-    constructor(id, name, isShort, dom) {
-      super(id, name);
-      this.isShort = false;
-      this.dom = null;
-      this.disabled = false;
-      this.injected = false;
-      this.isShort = isShort;
-      this.dom = dom;
-    }
-    changeInjectionState(plus) {
-      if (!this.dom) return;
-      const element = this.dom.querySelector("#whitelist-spot");
-      if (!element) return;
-      if (plus) {
-        element.innerHTML = `<h2>+</h2>`;
-      } else {
-        element.innerHTML = `<h2>-</h2>`;
-      }
-    }
-    refresh() {
-      if (!this.dom) return;
-      if (ChromeExtension.enabled) {
-        if (this.disabled) {
-          this.dom.style.display = "none";
-        } else {
-          this.dom.style.display = "block";
-        }
-      } else {
-        this.dom.style.display = "block";
-      }
-      this.changeInjectionState(this.disabled);
-    }
-    disable() {
-      if (this.disabled) return;
-      if (!this.dom) return;
-      if (ChromeExtension.enabled) {
-        this.dom.style.display = "none";
-      }
-      this.changeInjectionState(true);
-      this.disabled = true;
-    }
-    enable() {
-      if (!this.dom) return;
-      if (ChromeExtension.enabled) {
-        this.dom.style.display = "block";
-      }
-      this.changeInjectionState(false);
-      this.disabled = false;
-    }
-    /**
-     * @param {Channel} channel
-     */
-    inject(channel) {
-      if (!this.dom) return;
-      if (this.dom.dataset.whitelisted) {
-        this.injected = true;
-        return;
-      }
-      const element = tdiv();
-      if (!this.disabled)
-        element.innerHTML = `<h2>-</h2>`;
-      else
-        element.innerHTML = `<h2>+</h2>`;
-      element.id = "whitelist-spot";
-      const onclick_function = () => {
-        if (this.disabled) {
-          MessageHandler.addChannel(channel.name);
-          ChromeExtension.addAllowedChannel(channel.name);
-          this.enable();
-          channel.enable();
-        } else {
-          MessageHandler.removeChannel(channel.name);
-          ChromeExtension.removeAllowedChannel(channel.name);
-          this.disable();
-          channel.disable();
-        }
-      };
-      element.onclick = onclick_function.bind(this);
-      element.onmousedown = (_) => {
-        onclick_function();
-      };
-      this.dom.appendChild(element);
-      this.dom.dataset.whitelisted = "true";
-    }
-  };
-
-  // src/factory/videofactory.ts
-  var VideoFactory = class {
-    static createVideo(video_dom) {
-      var _a;
-      function extractVideoId(url) {
-        var match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-        return match && match[1];
-      }
-      function getTitleAndID() {
-        const is_home = ChromeExtension.page_instance.page === "home";
-        let anchor_tags;
-        if (is_home) {
-          anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.home.yt_video_title.tag);
-        } else {
-          anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_title.tag);
-        }
-        for (let i = 0; i < anchor_tags.length; i++) {
-          const anchor = anchor_tags[i];
-          if (is_home) {
-            if (anchor.id === YoutubeSettings.home.yt_video_title.id) {
-              return { title: anchor.innerText, id: extractVideoId(anchor.href) };
-            }
-          } else {
-            if (anchor.id === YoutubeSettings.video.yt_video_title.id) {
-              const href_dom = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_link.tag)[0];
-              const href = href_dom.href;
-              return { title: anchor.innerText, id: extractVideoId(href) };
-            }
-          }
-        }
-        return { title: "", id: "" };
-      }
-      function getChannelName() {
-        const is_home = ChromeExtension.page_instance.page === "home";
-        let channel_tag;
-        if (is_home) {
-          channel_tag = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
-        } else {
-          channel_tag = video_dom.getElementsByTagName(YoutubeSettings.video.channel.tag);
-        }
-        for (let i = 0; i < channel_tag.length; i++) {
-          let search = null;
-          if (is_home)
-            search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
-          else {
-            const link_container = video_dom.querySelector("#" + YoutubeSettings.video.channel.link.container);
-            if (!link_container) {
-              console.error("[channel] No link container");
-              return { name: "", id: "" };
-            }
-            let link_anchor = link_container.getElementsByTagName(YoutubeSettings.video.channel.link.tag);
-            let link = "";
-            for (let i2 = 0; i2 < link_anchor.length; i2++) {
-              const link_dom = link_anchor[i2];
-              if (link_dom.className === YoutubeSettings.video.channel.link.class) {
-                link = link_dom.href;
-                break;
-              }
-            }
-            search = { innerText: channel_tag[i].title, href: link };
-          }
-          if (search) {
-            return { name: search.innerText, id: search.href };
-          }
-        }
-        return { name: "", id: "" };
-      }
-      return { video: new Video((_a = getTitleAndID().id) != null ? _a : "", getTitleAndID().title, false, video_dom), channelname: getChannelName() };
-    }
-  };
-
-  // src/error/timeout.ts
-  var TimeoutError = class extends Error {
-    constructor(message) {
-      super(message);
-      this.name = "TimeoutError";
-    }
-  };
-
-  // src/util/sleep.ts
-  async function sleep(callback, timeout) {
-    return new Promise((resolve, _reject) => {
-      setTimeout(() => {
-        resolve(callback());
-      }, timeout);
-    });
-  }
 
   // src/handler/pagehandler.ts
   var _PageHandler = class _PageHandler {
@@ -556,7 +397,7 @@
     }
     async getPage() {
       return new Promise((resolve, _reject) => {
-        Browser.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
+        Browser2.browser.runtime.sendMessage({ type: "get-page" }, (response) => {
           resolve(response.page);
         });
       });
@@ -576,6 +417,94 @@
   };
   _PageHandler.engine_running = false;
   var PageHandler = _PageHandler;
+
+  // src/object/video.ts
+  var Video = class extends Identifiable {
+    constructor(id, name, isShort, dom) {
+      super(id, name);
+      this.isShort = false;
+      this.dom = null;
+      this.disabled = false;
+      this.injected = false;
+      this.isShort = isShort;
+      this.dom = dom;
+    }
+    changeInjectionState(plus) {
+      if (!this.dom) return;
+      const element = this.dom.querySelector("#whitelist-spot");
+      if (!element) return;
+      if (plus) {
+        element.innerHTML = `<h2>+</h2>`;
+      } else {
+        element.innerHTML = `<h2>-</h2>`;
+      }
+    }
+    refresh() {
+      if (!this.dom) return;
+      if (ChromeExtension.enabled) {
+        if (this.disabled) {
+          this.dom.style.display = "none";
+        } else {
+          this.dom.style.display = "block";
+        }
+      } else {
+        this.dom.style.display = "block";
+      }
+      this.changeInjectionState(this.disabled);
+    }
+    disable() {
+      if (this.disabled) return;
+      if (!this.dom) return;
+      if (ChromeExtension.enabled) {
+        this.dom.style.display = "none";
+      }
+      this.changeInjectionState(true);
+      this.disabled = true;
+    }
+    enable() {
+      if (!this.dom) return;
+      if (ChromeExtension.enabled) {
+        this.dom.style.display = "block";
+      }
+      this.changeInjectionState(false);
+      this.disabled = false;
+    }
+    /**
+     * @param {Channel} channel
+     */
+    inject(channel) {
+      if (!this.dom) return;
+      if (this.dom.dataset.whitelisted) {
+        this.injected = true;
+        return;
+      }
+      const element = tdiv();
+      if (!this.disabled)
+        element.innerHTML = `<h2>-</h2>`;
+      else
+        element.innerHTML = `<h2>+</h2>`;
+      element.id = "whitelist-spot";
+      const onclick_function = () => {
+        if (this.disabled) {
+          MessageHandler.addChannel(channel.name);
+          ChromeExtension.addAllowedChannel(channel.name);
+          this.enable();
+          channel.enable();
+        } else {
+          MessageHandler.removeChannel(channel.name);
+          ChromeExtension.removeAllowedChannel(channel.name);
+          this.disable();
+          channel.disable();
+        }
+      };
+      element.onclick = onclick_function.bind(this);
+      element.onmousedown = (_) => {
+        onclick_function();
+      };
+      this.dom.appendChild(element);
+      this.dom.dataset.whitelisted = "true";
+    }
+  };
 
   // src/object/channel.ts
   var Channel = class extends Identifiable {
@@ -748,14 +677,14 @@
     }
     static async generateSerializerDiv() {
       const small_page = await this.generateTogglePage();
-      const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
+      const div = tdiv2({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
       div.onclick = () => {
         small_page.toggle();
       };
       return div;
     }
     static async generateToggleDiv() {
-      const div = tdiv({ id: "wt-toggle" });
+      const div = tdiv2({ id: "wt-toggle" });
       _ChromeExtension.enabled = await _ChromeExtension.getEnabled();
       if (_ChromeExtension.enabled) {
         div.innerHTML = `<h2>Enabled</h2>`;
@@ -778,7 +707,7 @@
       return div;
     }
     static async generateAddDiv(channel) {
-      const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel } });
+      const div = tdiv2({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel } });
       if (_ChromeExtension.allowed_channels.includes(channel))
         div.innerHTML = `<h2>Blacklist Channel</h2>`;
       else
@@ -1022,5 +951,76 @@
     return true;
   }
   inject();
+
+  // src/factory/videofactory.ts
+  var VideoFactory = class {
+    static createVideo(video_dom) {
+      var _a;
+      function extractVideoId(url) {
+        var match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        return match && match[1];
+      }
+      function getTitleAndID() {
+        const is_home = ChromeExtension.page_instance.page === "home";
+        let anchor_tags;
+        if (is_home) {
+          anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.home.yt_video_title.tag);
+        } else {
+          anchor_tags = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_title.tag);
+        }
+        for (let i = 0; i < anchor_tags.length; i++) {
+          const anchor = anchor_tags[i];
+          if (is_home) {
+            if (anchor.id === YoutubeSettings.home.yt_video_title.id) {
+              return { title: anchor.innerText, id: extractVideoId(anchor.href) };
+            }
+          } else {
+            if (anchor.id === YoutubeSettings.video.yt_video_title.id) {
+              const href_dom = video_dom.getElementsByTagName(YoutubeSettings.video.yt_video_link.tag)[0];
+              const href = href_dom.href;
+              return { title: anchor.innerText, id: extractVideoId(href) };
+            }
+          }
+        }
+        return { title: "", id: "" };
+      }
+      function getChannelName() {
+        const is_home = ChromeExtension.page_instance.page === "home";
+        let channel_tag;
+        if (is_home) {
+          channel_tag = video_dom.getElementsByTagName(YoutubeSettings.generic.yt_video.channel.tag);
+        } else {
+          channel_tag = video_dom.getElementsByTagName(YoutubeSettings.video.channel.tag);
+        }
+        for (let i = 0; i < channel_tag.length; i++) {
+          let search = null;
+          if (is_home)
+            search = channel_tag[i].getElementsByTagName(YoutubeSettings.generic.yt_video.channel.id.tag)[0];
+          else {
+            const link_container = video_dom.querySelector("#" + YoutubeSettings.video.channel.link.container);
+            if (!link_container) {
+              console.error("[channel] No link container");
+              return { name: "", id: "" };
+            }
+            let link_anchor = link_container.getElementsByTagName(YoutubeSettings.video.channel.link.tag);
+            let link = "";
+            for (let i2 = 0; i2 < link_anchor.length; i2++) {
+              const link_dom = link_anchor[i2];
+              if (link_dom.className === YoutubeSettings.video.channel.link.class) {
+                link = link_dom.href;
+                break;
+              }
+            }
+            search = { innerText: channel_tag[i].title, href: link };
+          }
+          if (search) {
+            return { name: search.innerText, id: search.href };
+          }
+        }
+        return { name: "", id: "" };
+      }
+      return { video: new Video((_a = getTitleAndID().id) != null ? _a : "", getTitleAndID().title, false, video_dom), channelname: getChannelName() };
+    }
+  };
 })();
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=videofactory.js.map

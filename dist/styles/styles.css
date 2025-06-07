@@ -1,3 +1,4 @@
+/* src/styles/styles.scss */
 #whitelist-spot {
   position: absolute;
   top: -2em;
@@ -8,17 +9,15 @@
   padding: 0.5em;
 }
 #whitelist-spot h2 {
-  /* check color scheme */
   color: #fff;
   font-size: 5em;
   font-weight: bold;
+  -moz-user-select: -moz-none;
   user-select: none;
   pointer-events: all;
   cursor: crosshair;
-  /* text-stroke */
   -webkit-text-stroke: 0.05em #000;
 }
-
 #wt-toggle,
 #wt-serializer {
   background: #fff;
@@ -28,14 +27,12 @@
   margin-right: 0.5em;
   position: relative;
 }
-
 #wt-toggle {
   opacity: 0.5;
 }
 #wt-toggle.on {
   opacity: 1;
 }
-
 #wt-add {
   margin-left: 0.25em;
   font-size: 1.5em;
@@ -44,5 +41,4 @@
   border: 2px solid #000;
   border-radius: 5px;
 }
-
 /*# sourceMappingURL=styles.css.map */
