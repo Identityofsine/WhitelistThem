@@ -435,7 +435,12 @@ export class ChromeExtension {
 		let banned_channels = this.channels.channels.filter(
 			(channel) => !ChromeExtension.allowed_channels.includes(channel.name),
 		);
-		banned_channels.forEach((channel) => channel.disable());
+		banned_channels.forEach(async (channel) => {
+			if (channel.disabledState === false) {
+				console.log(`[inject] Disabling channel: ${channel.name}`);
+				channel.disable();
+			}
+		});
 	}
 
 	async enableVideos() {
@@ -447,8 +452,9 @@ export class ChromeExtension {
 
 	startVideoDisableLoop() {
 		console.log("[inject] Starting Video Disable Routine...");
-		ChromeExtension.page_instance.onVideoRefresh =
-			this.disableVideos.bind(this);
+		ChromeExtension.page_instance.onVideoRefresh = async () => {
+			this.disableVideos.bind(this)();
+		};
 	}
 
 	clearCache() {
@@ -457,20 +463,20 @@ export class ChromeExtension {
 
 	refreshCache() { }
 
-	static addAllowedChannel(channel_name: string) {
+	static addAllowedChannel(channel_name: string, callback?: () => void) {
 		if (!ChromeExtension.allowed_channels.includes(channel_name)) {
 			ChromeExtension.allowed_channels.push(channel_name);
-			MessageHandler.addChannel(channel_name);
+			MessageHandler.addChannel(channel_name, callback);
 		}
 	}
 
-	static removeAllowedChannel(channel_name: string) {
+	static removeAllowedChannel(channel_name: string, callback?: () => void) {
 		if (ChromeExtension.allowed_channels.includes(channel_name)) {
 			ChromeExtension.allowed_channels.splice(
 				ChromeExtension.allowed_channels.indexOf(channel_name),
 				1,
 			);
-			MessageHandler.removeChannel(channel_name);
+			MessageHandler.removeChannel(channel_name, callback);
 		}
 	}
 }
@@ -481,7 +487,7 @@ async function inject(..._: any[]) {
 
 	console.log("[injector] Injecting...");
 	ChromeExtension.page_instance.onVideoRefresh = () => {
-		//ce.injectHeader();
+		ce.injectHeader();
 		ce.injectChannel();
 		ce.channels.channels.forEach((channel) => {
 			channel.refresh();

@@ -1,12 +1,13 @@
+import { FxState } from "framework/state/state";
 import { ChromeExtension } from "..";
-import { MessageHandler } from "../handler/messagehandler";
 import { Identifiable } from "./abstract/identifiable";
-import { Channel } from "./channel";
+import { ToggleComponent } from "framework/components/ToggleComponent";
+import { MessageHandler } from "handler/messagehandler";
 
 export class Video extends Identifiable {
 	isShort = false;
 	dom: HTMLElement | null = null;
-	disabled = false;
+	disabled: FxState<boolean> | null = null;
 	injected = false;
 
 	constructor(id: string, name: string, isShort: boolean, dom: HTMLElement) {
@@ -18,23 +19,11 @@ export class Video extends Identifiable {
 		});
 	}
 
-	changeInjectionState(plus: boolean) {
-		/**
-		if (!this.dom) return;
-		const element = this.dom.querySelector("#whitelist-spot");
-		if (!element) return;
-		if (plus) {
-			element.innerHTML = `<h2>+</h2>`;
-		} else {
-			element.innerHTML = `<h2>-</h2>`;
-		}
-		*/
-	}
-
 	refresh() {
 		if (!this.dom) return;
+		if (!this.disabled) return;
 		if (ChromeExtension.enabled()) {
-			if (this.disabled) {
+			if (this.disabled()) {
 				this.dom.style.display = "none";
 			} else {
 				this.dom.style.display = "block";
@@ -42,38 +31,39 @@ export class Video extends Identifiable {
 		} else {
 			this.dom.style.display = "block";
 		}
-		this.changeInjectionState(this.disabled);
-	}
-
-	disable() {
-		if (this.disabled) return;
-		if (!this.dom) return;
-		if (ChromeExtension.enabled()) {
-			this.dom.style.display = "none";
-		}
-
-		this.changeInjectionState(true);
-		this.disabled = true;
-	}
-
-	enable() {
-		if (!this.dom) return;
-		if (ChromeExtension.enabled()) {
-			this.dom.style.display = "block";
-		}
-		this.changeInjectionState(false);
-		this.disabled = false;
 	}
 
 	/**
-	 * @param {Channel} channel
 	 */
-	inject(channel: Channel) {
+	inject(disabled: FxState<boolean>) {
 		if (!this.dom) return;
 		if (this.dom.dataset.whitelisted) {
 			this.injected = true;
 			return;
 		}
+
+		this.disabled = disabled;
+		const element = new ToggleComponent({
+			tag: "video-toggle-component",
+			template: `
+			<div id="whitelist-spot" class="">
+				<h2>{0 ? + : -}</h2>
+			</div>
+			`,
+			state: disabled,
+			onClick: () => {
+				const state = disabled();
+				disabled.set(!state);
+			},
+		});
+
+		disabled.effect(() => {
+			this.refresh();
+		});
+
+		this.dom.appendChild(element.elementRef);
+		this.dom.dataset.whitelisted = "true";
+
 		/**
 
 		const element = tdiv();
@@ -104,8 +94,6 @@ export class Video extends Identifiable {
 		element.onmousedown = (_) => {
 			onclick_function();
 		}
-		this.dom.appendChild(element);
-		this.dom.dataset.whitelisted = 'true';
 		*/
 	}
 }

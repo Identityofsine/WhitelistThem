@@ -25,8 +25,9 @@ export class Component implements HTMLActions  {
 	private _events$: Dispatch<void, void>[] = [];
 
 	constructor(props?: ComponentProps) {
+		const tag = props?.tag ?? 'component';
+		this.element = props?.element ?? document.createElement(tag);
 		this.setContent(props?.template ?? ``, ...(props?.states ?? []));
-		this.element = props?.element ?? document.createElement(props?.tag ?? `div`);
 	}
 
 	get elementRef(): HTMLElement {

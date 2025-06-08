@@ -22,7 +22,8 @@ export class State<ObjectType> {
 		return this.state;
 	}
 
-	setState(newState: ObjectType): void {
+	async setState(newState: ObjectType) {
+		if(this.state === newState || this.state == newState) return;
 		this.state = newState;
 		this._events.forEach((callback) => callback(newState));
 	}
@@ -47,7 +48,7 @@ export class State<ObjectType> {
 
 }
 
-export function createState<ObjectType>(initialState?: ObjectType): FxState<ObjectType> {
+export function createState<ObjectType>(initialState: ObjectType): FxState<ObjectType> {
 	const statePrototype = new State<ObjectType>(initialState);
 
 	const fxState = () => statePrototype.stateValue.bind(statePrototype)() as ObjectType | undefined;

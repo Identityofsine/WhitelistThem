@@ -8,16 +8,18 @@ const TEMPLATE =
 
 
 type ToggleProps = {
+	tag?: string;
+	template?: string;
 	state: FxState<boolean>;
 	onClick?: (state: Partial<MouseEvent>) => void;
 }
 
 export class ToggleComponent extends Component {
 
-	constructor({state, onClick}: ToggleProps) {
+	constructor({tag, template, state, onClick}: ToggleProps) {
 		super({
-			tag: "toggle-component",
-			template: TEMPLATE,
+			tag: tag ?? "toggle-component",
+			template: template ?? TEMPLATE,
 			states: [state],
 		});
 		onClick && this.onClick(onClick)

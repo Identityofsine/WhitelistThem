@@ -3,7 +3,7 @@
   // src/constants/settings.ts
   var SleepSettings = {
     waiting: 250,
-    engine: 600,
+    engine: 50,
     max_attempts: 50
   };
   var YoutubeSettings = {
@@ -117,13 +117,198 @@
     }
   };
 
+  // src/framework/element/component.ts
+  var REGEX_TEMPLATE = /\{\d+(.*?)\}/g;
+  var REGEX_TENTATIVE = /\{\d+\s*\?\s*[^:{}]+\s*:\s*[^{}]+\}/;
+  var REGEX_TENTATIVE_TRUE = /\?\s*([^:}]+?)\s*:/g;
+  var REGEX_TENTATIVE_FALSE = /:\s*([^}]+?)\s*}/g;
+  var REGEX_TENTATIVE_REMOVE_SYMBOL = /\{*\?*:*\}*[\s]*/g;
+  var REGEX_STATE = /\s*(\d+)/;
+  var Component = class {
+    constructor(props) {
+      this.htmlTemplate = ``;
+      this._states = [];
+      this._events$ = [];
+      var _a2, _b, _c, _d;
+      const tag = (_a2 = props == null ? void 0 : props.tag) != null ? _a2 : "component";
+      this.element = (_b = props == null ? void 0 : props.element) != null ? _b : document.createElement(tag);
+      this.setContent((_c = props == null ? void 0 : props.template) != null ? _c : ``, ...(_d = props == null ? void 0 : props.states) != null ? _d : []);
+    }
+    get elementRef() {
+      return this.element;
+    }
+    /**
+    	* html template should be set like the java log4j2 template: <div>{}</div>
+    	*/
+    setContent(html, ...args) {
+      this.onDestroy();
+      if (args.length > 0) {
+        this._states = args;
+        this._states.forEach((state) => {
+          const event = state.effect(() => this.render());
+          this._events$.push(event);
+        });
+      }
+      this.htmlTemplate = html.replace(/[\n\r\t]/g, ``).trim();
+      this.render();
+    }
+    onDestroy() {
+      this._events$.forEach((event) => event());
+      this._events$ = [];
+    }
+    render() {
+      if (this.element) {
+        const htmlTemplateCount = (this.htmlTemplate.match(/{}/g) || []).length;
+        if (htmlTemplateCount !== this._states.length) {
+        }
+        const needToBeParsed = TemplateParser.parse(this.htmlTemplate);
+        needToBeParsed.forEach((item) => {
+          const stateIndex = item.stateIndex;
+          if (stateIndex >= 0 && stateIndex < this._states.length) {
+            const stateContent = this._states[stateIndex]();
+            if (stateContent !== void 0) {
+              item.updateValue(stateContent);
+            }
+          } else {
+            item.updateValue(``);
+          }
+        });
+        this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+      } else {
+        console.warn("Element is not defined, cannot render component.");
+      }
+    }
+    onClick(listener) {
+      if (this.element) {
+        this.element.addEventListener("click", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach click listener.");
+      }
+    }
+    onMouseOver(listener) {
+      if (this.element) {
+        this.element.addEventListener("mouseover", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach mouseover listener.");
+      }
+    }
+    onMouseOut(listener) {
+      if (this.element) {
+        this.element.addEventListener("mouseout", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach mouseout listener.");
+      }
+    }
+  };
+  var TemplateParsed = class {
+    constructor(content, offset, source, stateIndex = -1) {
+      this.id = Identifiable.generateUUID();
+      //-1 = no state
+      this.stateIndex = -1;
+      this.offset = 0;
+      this.content = ``;
+      this.length = 0;
+      this.originalLength = 0;
+      this.source = ``;
+      this.content = content;
+      this.offset = offset;
+      this.source = source;
+      this.length = content.length;
+      this.originalLength = content.length;
+      this.stateIndex = stateIndex;
+    }
+    isTentative() {
+      return REGEX_TENTATIVE.test(this.content);
+    }
+    updateValue(value) {
+      var _a2, _b;
+      const isTentative = this.isTentative();
+      if (isTentative) {
+        const tentativeTrue = (_a2 = this.content.match(REGEX_TENTATIVE_TRUE)) == null ? void 0 : _a2.find((match) => match !== void 0);
+        const tentativeFalse = (_b = this.content.match(REGEX_TENTATIVE_FALSE)) == null ? void 0 : _b.find((match) => match !== void 0);
+        if (tentativeTrue && tentativeFalse) {
+          if (value) {
+            value = tentativeTrue.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
+          } else {
+            value = tentativeFalse.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
+          }
+        } else {
+          console.warn(`[TemplateParsed] Tentative expression is not valid: ${this.content}`);
+          return;
+        }
+      }
+      const content = this.content.replace(REGEX_TEMPLATE, value);
+      this.setContent(content);
+    }
+    setContent(content) {
+      this.content = content;
+      this.length = content.length;
+    }
+    getContent() {
+      return this.content;
+    }
+    get lengthValue() {
+      return this.length;
+    }
+  };
+  var TemplateParser = class {
+    static parse(template) {
+      const parsed = [];
+      for (const match of template.matchAll(REGEX_TEMPLATE)) {
+        const content = match[0];
+        const offset = match.index || 0;
+        const stateIndexMatch = content.match(REGEX_STATE);
+        const source = template;
+        const parsedItem = new TemplateParsed(content, offset, source, stateIndexMatch ? parseInt(stateIndexMatch[1], 10) : -1);
+        parsed.push(parsedItem);
+      }
+      return parsed;
+    }
+    static rebuild(template, parsed) {
+      let rebuiltTemplate = template;
+      let offsetDelta = 0;
+      parsed.forEach((item) => {
+        const offset = item.offset + offsetDelta;
+        if (item.stateIndex >= 0) {
+          const stateContent = item.getContent();
+          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + stateContent + rebuiltTemplate.slice(offset + item.originalLength);
+          offsetDelta += stateContent.length - item.originalLength;
+        } else {
+          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + rebuiltTemplate.slice(offset);
+        }
+      });
+      return rebuiltTemplate;
+    }
+  };
+
+  // src/framework/components/ToggleComponent.ts
+  var TEMPLATE = `<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
+	<h2>{0 ? Enabled : Disabled}</h2>
+</div>`;
+  var ToggleComponent = class extends Component {
+    constructor({ tag, template, state, onClick }) {
+      super({
+        tag: tag != null ? tag : "toggle-component",
+        template: template != null ? template : TEMPLATE,
+        states: [state]
+      });
+      onClick && this.onClick(onClick);
+    }
+  };
+
   // src/object/video.ts
   var Video = class extends Identifiable {
     constructor(id, name, isShort, dom) {
       super(id, name);
       this.isShort = false;
       this.dom = null;
-      this.disabled = false;
+      this.disabled = null;
       this.injected = false;
       this.isShort = isShort;
       this.dom = dom;
@@ -131,12 +316,11 @@
         this.refresh();
       });
     }
-    changeInjectionState(plus) {
-    }
     refresh() {
       if (!this.dom) return;
+      if (!this.disabled) return;
       if (ChromeExtension.enabled()) {
-        if (this.disabled) {
+        if (this.disabled()) {
           this.dom.style.display = "none";
         } else {
           this.dom.style.display = "block";
@@ -144,41 +328,41 @@
       } else {
         this.dom.style.display = "block";
       }
-      this.changeInjectionState(this.disabled);
-    }
-    disable() {
-      if (this.disabled) return;
-      if (!this.dom) return;
-      if (ChromeExtension.enabled()) {
-        this.dom.style.display = "none";
-      }
-      this.changeInjectionState(true);
-      this.disabled = true;
-    }
-    enable() {
-      if (!this.dom) return;
-      if (ChromeExtension.enabled()) {
-        this.dom.style.display = "block";
-      }
-      this.changeInjectionState(false);
-      this.disabled = false;
     }
     /**
-     * @param {Channel} channel
      */
-    inject(channel) {
+    inject(disabled) {
       if (!this.dom) return;
       if (this.dom.dataset.whitelisted) {
         this.injected = true;
         return;
       }
+      this.disabled = disabled;
+      const element = new ToggleComponent({
+        tag: "video-toggle-component",
+        template: `
+			<div id="whitelist-spot" class="">
+				<h2>{0 ? + : -}</h2>
+			</div>
+			`,
+        state: disabled,
+        onClick: () => {
+          const state = disabled();
+          disabled.set(!state);
+        }
+      });
+      disabled.effect(() => {
+        this.refresh();
+      });
+      this.dom.appendChild(element.elementRef);
+      this.dom.dataset.whitelisted = "true";
     }
   };
 
   // src/factory/videofactory.ts
   var VideoFactory = class {
     static createVideo(video_dom) {
-      var _a;
+      var _a2;
       function extractVideoId(url) {
         var match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
         return match && match[1];
@@ -242,7 +426,7 @@
         }
         return { name: "", id: "" };
       }
-      return { video: new Video((_a = getTitleAndID().id) != null ? _a : "", getTitleAndID().title, false, video_dom), channelname: getChannelName() };
+      return { video: new Video((_a2 = getTitleAndID().id) != null ? _a2 : "", getTitleAndID().title, false, video_dom), channelname: getChannelName() };
     }
   };
 
@@ -269,15 +453,14 @@
           console.error("[MessageHandler] Error: %s", lastError.message);
           return;
         }
-        if (callback)
-          callback(response);
+        if (callback) callback(response);
       });
     }
-    static addChannel(channel) {
-      this.send({ type: "add-channel", channel });
+    static addChannel(channel, callback) {
+      this.send({ type: "add-channel", channel }, callback);
     }
-    static removeChannel(channel) {
-      this.send({ type: "remove-channel", channel });
+    static removeChannel(channel, callback) {
+      this.send({ type: "remove-channel", channel }, callback);
     }
     static onMessage(callback) {
       Browser.browser.runtime.onMessage.addListener(() => callback());
@@ -442,47 +625,6 @@
   _PageHandler.engine_running = false;
   var PageHandler = _PageHandler;
 
-  // src/object/channel.ts
-  var Channel = class extends Identifiable {
-    constructor(id, name) {
-      super(id, name);
-      this.videos = [];
-    }
-    doesVideoExist(video) {
-      if (video instanceof Video) {
-        const first_search = this.videos.find((v) => v.compare(video));
-        if (first_search) return first_search;
-      }
-      return false;
-    }
-    addVideo(video) {
-      if (video instanceof Video) {
-        const _video = this.doesVideoExist(video);
-        if (_video) {
-          this.removeVideo(_video);
-        }
-        video.inject(this);
-        this.videos.push(video);
-        return video;
-      } else return false;
-    }
-    //remove video?
-    removeVideo(video) {
-      if (video instanceof Video) {
-        this.videos = this.videos.filter((v) => !v.compare(video));
-      }
-    }
-    enable() {
-      this.videos.forEach((video) => video.enable());
-    }
-    disable() {
-      this.videos.forEach((video) => video.disable());
-    }
-    refresh() {
-      this.videos.forEach((video) => video.refresh());
-    }
-  };
-
   // src/framework/state/state.ts
   var State = class {
     constructor(state) {
@@ -492,7 +634,8 @@
     stateValue() {
       return this.state;
     }
-    setState(newState) {
+    async setState(newState) {
+      if (this.state === newState || this.state == newState) return;
       this.state = newState;
       this._events.forEach((callback) => callback(newState));
     }
@@ -523,187 +666,70 @@
     return fxState;
   }
 
-  // src/framework/element/component.ts
-  var REGEX_TEMPLATE = /\{\d+(.*?)\}/g;
-  var REGEX_TENTATIVE = /\{\d+\s*\?\s*[^:{}]+\s*:\s*[^{}]+\}/;
-  var REGEX_TENTATIVE_TRUE = /\?\s*([^:}]+?)\s*:/g;
-  var REGEX_TENTATIVE_FALSE = /:\s*([^}]+?)\s*}/g;
-  var REGEX_TENTATIVE_REMOVE_SYMBOL = /\{*\?*:*\}*[\s]*/g;
-  var REGEX_STATE = /\s*(\d+)/;
-  var Component = class {
-    constructor(props) {
-      this.htmlTemplate = ``;
-      this._states = [];
-      this._events$ = [];
-      var _a, _b, _c, _d;
-      this.setContent((_a = props == null ? void 0 : props.template) != null ? _a : ``, ...(_b = props == null ? void 0 : props.states) != null ? _b : []);
-      this.element = (_d = props == null ? void 0 : props.element) != null ? _d : document.createElement((_c = props == null ? void 0 : props.tag) != null ? _c : `div`);
-    }
-    get elementRef() {
-      return this.element;
-    }
-    /**
-    	* html template should be set like the java log4j2 template: <div>{}</div>
-    	*/
-    setContent(html, ...args) {
-      this.onDestroy();
-      if (args.length > 0) {
-        this._states = args;
-        this._states.forEach((state) => {
-          const event = state.effect(() => this.render());
-          this._events$.push(event);
-        });
-      }
-      this.htmlTemplate = html.replace(/[\n\r\t]/g, ``).trim();
-      this.render();
-    }
-    onDestroy() {
-      this._events$.forEach((event) => event());
-      this._events$ = [];
-    }
-    render() {
-      if (this.element) {
-        const htmlTemplateCount = (this.htmlTemplate.match(/{}/g) || []).length;
-        if (htmlTemplateCount !== this._states.length) {
-        }
-        const needToBeParsed = TemplateParser.parse(this.htmlTemplate);
-        needToBeParsed.forEach((item) => {
-          const stateIndex = item.stateIndex;
-          if (stateIndex >= 0 && stateIndex < this._states.length) {
-            const stateContent = this._states[stateIndex]();
-            if (stateContent !== void 0) {
-              item.updateValue(stateContent);
-            }
-          } else {
-            item.updateValue(``);
-          }
-        });
-        this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
-      } else {
-        console.warn("Element is not defined, cannot render component.");
-      }
-    }
-    onClick(listener) {
-      if (this.element) {
-        this.element.addEventListener("click", (event) => {
-          listener(event);
-        });
-      } else {
-        console.warn("Element is not defined, cannot attach click listener.");
-      }
-    }
-    onMouseOver(listener) {
-      if (this.element) {
-        this.element.addEventListener("mouseover", (event) => {
-          listener(event);
-        });
-      } else {
-        console.warn("Element is not defined, cannot attach mouseover listener.");
-      }
-    }
-    onMouseOut(listener) {
-      if (this.element) {
-        this.element.addEventListener("mouseout", (event) => {
-          listener(event);
-        });
-      } else {
-        console.warn("Element is not defined, cannot attach mouseout listener.");
-      }
-    }
-  };
-  var TemplateParsed = class {
-    constructor(content, offset, source, stateIndex = -1) {
-      this.id = Identifiable.generateUUID();
-      //-1 = no state
-      this.stateIndex = -1;
-      this.offset = 0;
-      this.content = ``;
-      this.length = 0;
-      this.originalLength = 0;
-      this.source = ``;
-      this.content = content;
-      this.offset = offset;
-      this.source = source;
-      this.length = content.length;
-      this.originalLength = content.length;
-      this.stateIndex = stateIndex;
-    }
-    isTentative() {
-      return REGEX_TENTATIVE.test(this.content);
-    }
-    updateValue(value) {
-      var _a, _b;
-      const isTentative = this.isTentative();
-      if (isTentative) {
-        const tentativeTrue = (_a = this.content.match(REGEX_TENTATIVE_TRUE)) == null ? void 0 : _a.find((match) => match !== void 0);
-        const tentativeFalse = (_b = this.content.match(REGEX_TENTATIVE_FALSE)) == null ? void 0 : _b.find((match) => match !== void 0);
-        if (tentativeTrue && tentativeFalse) {
-          if (value) {
-            value = tentativeTrue.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
-          } else {
-            value = tentativeFalse.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
-          }
-        } else {
-          console.warn(`[TemplateParsed] Tentative expression is not valid: ${this.content}`);
-          return;
-        }
-      }
-      const content = this.content.replace(REGEX_TEMPLATE, value);
-      this.setContent(content);
-    }
-    setContent(content) {
-      this.content = content;
-      this.length = content.length;
-    }
-    getContent() {
-      return this.content;
-    }
-    get lengthValue() {
-      return this.length;
-    }
-  };
-  var TemplateParser = class {
-    static parse(template) {
-      const parsed = [];
-      for (const match of template.matchAll(REGEX_TEMPLATE)) {
-        const content = match[0];
-        const offset = match.index || 0;
-        const stateIndexMatch = content.match(REGEX_STATE);
-        const source = template;
-        const parsedItem = new TemplateParsed(content, offset, source, stateIndexMatch ? parseInt(stateIndexMatch[1], 10) : -1);
-        parsed.push(parsedItem);
-      }
-      return parsed;
-    }
-    static rebuild(template, parsed) {
-      let rebuiltTemplate = template;
-      let offsetDelta = 0;
-      parsed.forEach((item) => {
-        const offset = item.offset + offsetDelta;
-        if (item.stateIndex >= 0) {
-          const stateContent = item.getContent();
-          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + stateContent + rebuiltTemplate.slice(offset + item.originalLength);
-          offsetDelta += stateContent.length - item.originalLength;
-        } else {
-          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + rebuiltTemplate.slice(offset);
+  // src/object/channel.ts
+  var _a;
+  var Channel = class extends Identifiable {
+    constructor(id, name) {
+      super(id, name);
+      this.videos = [];
+      this.disabled = createState(false);
+      this.disableDisplayState = createState((_a = this.disabledState) != null ? _a : false);
+      this.disabled.effect(async (state) => {
+        console.log(
+          `Channel ${this.name} is now ${state ? "disabled" : "enabled"}.`
+        );
+        if (state) {
+          this.disableDisplayState.set(true);
         }
       });
-      return rebuiltTemplate;
-    }
-  };
-
-  // src/framework/components/ToggleComponent.ts
-  var TEMPLATE = `<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
-	<h2>{0 ? Enabled : Disabled}</h2>
-</div>`;
-  var ToggleComponent = class extends Component {
-    constructor({ state, onClick }) {
-      super({
-        tag: "toggle-component",
-        template: TEMPLATE,
-        states: [state]
+      this.disableDisplayState.effect((state) => {
+        if (!state) {
+          MessageHandler.addChannel(this.name);
+          ChromeExtension.addAllowedChannel(this.name, () => {
+          });
+        } else {
+          MessageHandler.removeChannel(this.name);
+          ChromeExtension.removeAllowedChannel(this.name, () => {
+          });
+        }
       });
-      onClick && this.onClick(onClick);
+    }
+    doesVideoExist(video) {
+      if (video instanceof Video) {
+        const first_search = this.videos.find((v) => v.compare(video));
+        if (first_search) return first_search;
+      }
+      return false;
+    }
+    addVideo(video) {
+      if (video instanceof Video) {
+        const _video = this.doesVideoExist(video);
+        if (_video) {
+          this.removeVideo(_video);
+        }
+        video.inject(this.disableDisplayState);
+        this.videos.push(video);
+        return video;
+      } else return false;
+    }
+    //remove video?
+    removeVideo(video) {
+      if (video instanceof Video) {
+        this.videos = this.videos.filter((v) => !v.compare(video));
+      }
+    }
+    enable() {
+      ChromeExtension.addAllowedChannel(this.name);
+      this.disabled.set(false);
+    }
+    disable() {
+      this.disabled.set(true);
+    }
+    refresh() {
+      this.videos.forEach((video) => video.refresh());
+    }
+    get disabledState() {
+      return this.disabled();
     }
   };
 
@@ -856,14 +882,14 @@
       });
     }
     async refreshChannelInjection(div, channel_name) {
-      var _a, _b;
+      var _a2, _b;
       if (!div) {
         return;
       }
       if (!div.dataset) {
         div.dataset = { channel: channel_name };
       }
-      if (((_a = div.dataset) == null ? void 0 : _a.channel) !== channel_name) {
+      if (((_a2 = div.dataset) == null ? void 0 : _a2.channel) !== channel_name) {
         console.warn(
           "[channel] Channel name mismatch (expected: %s, got: %s)",
           (_b = div.dataset) == null ? void 0 : _b.channel,
@@ -878,10 +904,10 @@
       }
     }
     async injectChannel() {
-      var _a;
+      var _a2;
       if (_ChromeExtension.page_instance.page !== "channel") return;
       const injection_check = document.querySelectorAll("#wt-add");
-      const channel_name = (_a = await this.getChannelNameFromChannelPage()) != null ? _a : "";
+      const channel_name = (_a2 = await this.getChannelNameFromChannelPage()) != null ? _a2 : "";
       if (injection_check.length > 0) {
         if (injection_check.length >= 2) {
           console.warn(
@@ -997,7 +1023,12 @@
       let banned_channels = this.channels.channels.filter(
         (channel) => !_ChromeExtension.allowed_channels.includes(channel.name)
       );
-      banned_channels.forEach((channel) => channel.disable());
+      banned_channels.forEach(async (channel) => {
+        if (channel.disabledState === false) {
+          console.log(`[inject] Disabling channel: ${channel.name}`);
+          channel.disable();
+        }
+      });
     }
     async enableVideos() {
       let allowed_channels = this.channels.channels.filter(
@@ -1007,26 +1038,28 @@
     }
     startVideoDisableLoop() {
       console.log("[inject] Starting Video Disable Routine...");
-      _ChromeExtension.page_instance.onVideoRefresh = this.disableVideos.bind(this);
+      _ChromeExtension.page_instance.onVideoRefresh = async () => {
+        this.disableVideos.bind(this)();
+      };
     }
     clearCache() {
       this.channels.clearCache();
     }
     refreshCache() {
     }
-    static addAllowedChannel(channel_name) {
+    static addAllowedChannel(channel_name, callback) {
       if (!_ChromeExtension.allowed_channels.includes(channel_name)) {
         _ChromeExtension.allowed_channels.push(channel_name);
-        MessageHandler.addChannel(channel_name);
+        MessageHandler.addChannel(channel_name, callback);
       }
     }
-    static removeAllowedChannel(channel_name) {
+    static removeAllowedChannel(channel_name, callback) {
       if (_ChromeExtension.allowed_channels.includes(channel_name)) {
         _ChromeExtension.allowed_channels.splice(
           _ChromeExtension.allowed_channels.indexOf(channel_name),
           1
         );
-        MessageHandler.removeChannel(channel_name);
+        MessageHandler.removeChannel(channel_name, callback);
       }
     }
   };
@@ -1039,6 +1072,7 @@
     const ce = new ChromeExtension([]);
     console.log("[injector] Injecting...");
     ChromeExtension.page_instance.onVideoRefresh = () => {
+      ce.injectHeader();
       ce.injectChannel();
       ce.channels.channels.forEach((channel) => {
         channel.refresh();

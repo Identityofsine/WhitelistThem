@@ -10,21 +10,19 @@ export class MessageHandler {
 				console.error("[MessageHandler] Error: %s", lastError.message);
 				return;
 			}
-			if (callback)
-				callback(response);
+			if (callback) callback(response);
 		});
 	}
 
-	static addChannel(channel: string) {
-		this.send({ type: "add-channel", channel: channel });
+	static addChannel(channel: string, callback?: Dispatch) {
+		this.send({ type: "add-channel", channel: channel }, callback);
 	}
 
-	static removeChannel(channel: string) {
-		this.send({ type: "remove-channel", channel: channel });
+	static removeChannel(channel: string, callback?: Dispatch) {
+		this.send({ type: "remove-channel", channel: channel }, callback);
 	}
 
 	static onMessage(callback: Function) {
 		Browser.browser.runtime.onMessage.addListener(() => callback());
 	}
-
 }
