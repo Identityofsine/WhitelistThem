@@ -63,37 +63,5 @@ export class Video extends Identifiable {
 
 		this.dom.appendChild(element.elementRef);
 		this.dom.dataset.whitelisted = "true";
-
-		/**
-
-		const element = tdiv();
-
-		if (!this.disabled)
-			element.innerHTML = `<h2>-</h2>`;
-		else
-			element.innerHTML = `<h2>+</h2>`
-
-		element.id = "whitelist-spot";
-
-		const onclick_function = () => {
-			if (this.disabled) {
-				MessageHandler.addChannel(channel.name);
-				ChromeExtension.addAllowedChannel(channel.name);
-				this.enable();
-				channel.enable();
-			} else {
-				MessageHandler.removeChannel(channel.name);
-				ChromeExtension.removeAllowedChannel(channel.name);
-				this.disable();
-				channel.disable();
-			}
-		};
-
-		element.onclick = onclick_function.bind(this);
-		//adjust for macbook trackpad
-		element.onmousedown = (_) => {
-			onclick_function();
-		}
-		*/
 	}
 }
