@@ -1,4 +1,3 @@
-import { tdiv } from "framework/tagger";
 import { ChromeExtension } from "..";
 import { MessageHandler } from "../handler/messagehandler";
 import { Identifiable } from "./abstract/identifiable";
@@ -17,6 +16,7 @@ export class Video extends Identifiable {
 	}
 
 	changeInjectionState(plus: boolean) {
+		/**
 		if (!this.dom) return;
 		const element = this.dom.querySelector("#whitelist-spot");
 		if (!element) return;
@@ -25,9 +25,11 @@ export class Video extends Identifiable {
 		} else {
 			element.innerHTML = `<h2>-</h2>`;
 		}
+		*/
 	}
 
 	refresh() {
+		/**
 		if (!this.dom) return;
 		if (ChromeExtension.enabled) {
 			if (this.disabled) {
@@ -39,6 +41,7 @@ export class Video extends Identifiable {
 			this.dom.style.display = "block";
 		}
 		this.changeInjectionState(this.disabled);
+		*/
 	}
 
 	disable() {
@@ -70,6 +73,7 @@ export class Video extends Identifiable {
 			this.injected = true;
 			return;
 		}
+		/**
 
 		const element = tdiv();
 
@@ -101,6 +105,7 @@ export class Video extends Identifiable {
 		}
 		this.dom.appendChild(element);
 		this.dom.dataset.whitelisted = 'true';
+		*/
 	}
 
 }

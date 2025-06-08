@@ -1,12 +1,12 @@
 import { VideoFactory } from './factory/videofactory';
 import { YoutubeSettings } from './constants/settings';
-import { t_toggle_page, tbutton, tdiv, tflex, th2, tinput } from './framework/tagger';
 import { MessageHandler } from './handler/messagehandler';
 import { PageHandler } from './handler/pagehandler';
 import { Channel } from './object/channel';
 import './styles/styles.scss';
 import './styles/tagger.scss';
 import { Browser } from './interfaces/browser';
+import { createState, FxState, State } from 'framework/state/state';
 //check if page is still loading
 
 class ChannelCache {
@@ -90,7 +90,7 @@ export class ChromeExtension {
 	channels = new ChannelCache();
 	static allowed_channels: string[] = []; //string
 	static page_instance = new PageHandler();
-	static enabled: boolean = true;
+	static enabled: FxState<boolean> = createState(false);
 	searching = false;
 	started = false;
 
@@ -128,6 +128,7 @@ export class ChromeExtension {
 	}
 
 	private static async generateTogglePage() {
+		/**
 		const channel_input = tinput("text", "Input Channel JSON Here", "");
 		const flex = tflex(["column", "wrap"], "gap-02", {},
 			th2("Channel Serializer"),
@@ -160,9 +161,11 @@ export class ChromeExtension {
 		);
 		const page = t_toggle_page("right-0", {}, flex);
 		return page;
+		*/
 	}
 
 	static async generateSerializerDiv() {
+		/**
 		const small_page = await this.generateTogglePage();
 		const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
 		div.onclick = () => {
@@ -170,13 +173,16 @@ export class ChromeExtension {
 		}
 
 		return div;
+		*/
 	}
 
 	static async generateToggleDiv() {
 
+		ChromeExtension.enabled.set(await ChromeExtension.getEnabled());
+
+		/**
 		const div = tdiv({ id: "wt-toggle" });
 
-		ChromeExtension.enabled = await ChromeExtension.getEnabled();
 
 		if (ChromeExtension.enabled) {
 			div.innerHTML = `<h2>Enabled</h2>`;
@@ -199,9 +205,11 @@ export class ChromeExtension {
 			}
 		}
 		return div;
+		*/
 	}
 
 	static async generateAddDiv(channel: string) {
+		/**
 		const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel: channel } });
 		if (ChromeExtension.allowed_channels.includes(channel))
 			div.innerHTML = `<h2>Blacklist Channel</h2>`;
@@ -219,6 +227,7 @@ export class ChromeExtension {
 			}
 		}
 		return div;
+		*/
 	}
 
 	async injectHeader() {
@@ -230,8 +239,10 @@ export class ChromeExtension {
 		const injection_check = injection_spot.querySelector("#wt-toggle");
 		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
+		/**
 		injection_spot.appendChild(toggle_div);
 		await this.injectSeralizerButton();
+		*/
 	}
 
 	async injectSeralizerButton() {
@@ -242,8 +253,8 @@ export class ChromeExtension {
 		if (!buttons_container || !injection_spot) return;
 		const injection_check = injection_spot.querySelector("#wt-serializer");
 		if (injection_check) return;
-		const serializer_div = await ChromeExtension.generateSerializerDiv();
-		injection_spot.appendChild(serializer_div);
+		//const serializer_div = await ChromeExtension.generateSerializerDiv();
+		//injection_spot.appendChild(serializer_div);
 	}
 
 	async getChannelNameFromChannelPage(): Promise<string | undefined> {

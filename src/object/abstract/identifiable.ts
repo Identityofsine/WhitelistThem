@@ -10,10 +10,22 @@ export class Identifiable {
 	}
 
 	static generateUUID() {
-		const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-			return (c === "x" ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0) & 0x3 | 0x8).toString(16);
-		});
+		const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+			/[xy]/g,
+			function(c) {
+				return (
+					c === "x"
+						? (Math.random() * 16) | 0
+						: (((Math.random() * 16) | 0) & 0x3) | 0x8
+				).toString(16);
+			},
+		);
 		return uuid;
+	}
+
+	static generateIdentifiable(name: string) {
+		const id = Identifiable.generateUUID();
+		return new Identifiable(id, name);
 	}
 
 	compare(other: Identifiable) {
@@ -23,5 +35,4 @@ export class Identifiable {
 	compareUUID(other: Identifiable) {
 		return this.uuid === other.uuid;
 	}
-
 }

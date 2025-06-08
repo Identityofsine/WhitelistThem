@@ -1,22 +1,5 @@
 "use strict";
 (() => {
-  var __defProp = Object.defineProperty;
-  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __propIsEnum = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __spreadValues = (a, b) => {
-    for (var prop in b || (b = {}))
-      if (__hasOwnProp.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
-    if (__getOwnPropSymbols)
-      for (var prop of __getOwnPropSymbols(b)) {
-        if (__propIsEnum.call(b, prop))
-          __defNormalProp(a, prop, b[prop]);
-      }
-    return a;
-  };
-
   // src/constants/settings.ts
   var SleepSettings = {
     waiting: 250,
@@ -103,139 +86,6 @@
     }
   };
 
-  // src/framework/tagger.ts
-  console.log("[tagger framework] loaded");
-  var Updater = class _Updater {
-    constructor() {
-      this.events = [];
-    }
-    static getInstance() {
-      if (!_Updater.instance) {
-        _Updater.instance = new _Updater();
-      }
-      return _Updater.instance;
-    }
-    registerEvent(event) {
-      this.events.push(event);
-    }
-    update() {
-      this.events.forEach((event) => {
-        event();
-      });
-    }
-  };
-  function createState(initialState) {
-    let state = initialState;
-    const setState = (newState) => {
-      state = newState;
-      Updater.getInstance().update();
-    };
-    return { state: () => state, setState };
-  }
-  function flattenString(arr) {
-    return arr.join(" ");
-  }
-  function tag(tag2, attr = {}, ...children) {
-    const element = document.createElement(tag2);
-    if (attr) {
-      Object.keys(attr).forEach((key) => {
-        element.setAttribute(key, attr[key]);
-      });
-      element.classList.add("tag");
-    }
-    if (children) {
-      children.forEach((child) => {
-        element.appendChild(child);
-      });
-    }
-    return element;
-  }
-  function th2(text, attr = {}) {
-    return tag("h2", __spreadValues({}, attr), document.createTextNode(text));
-  }
-  function tdiv(attr = {}, ...children) {
-    return tag("div", attr, ...children);
-  }
-  function tinput(props, placeHolder = "", defaultValue = "", onValueChange, className = "", attr = {}) {
-    const state = createState(defaultValue);
-    const input = tag("input", __spreadValues({ type: props, placeholder: placeHolder, class: className }, attr));
-    input.value = defaultValue;
-    input.addEventListener("input", (_) => {
-      onValueChange && onValueChange(state.state());
-      state.setState(input.value);
-    });
-    function update() {
-      input.value = state.state();
-    }
-    Updater.getInstance().registerEvent(update);
-    return { input, state };
-  }
-  function tbutton(onclick, text, className = "", attr = {}, ...children) {
-    const button = tag("button", __spreadValues({ class: className }, attr), ...children);
-    button.appendChild(document.createTextNode(text));
-    button.onclick = (e) => {
-      e.preventDefault();
-      onclick();
-    };
-    return button;
-  }
-  function tflex(props = [], className = "", attr = {}, ...children) {
-    return tag("div", __spreadValues({ class: `flex ${flattenString(props)} ${className}` }, attr), ...children);
-  }
-  function t_toggle_page(className = "", attr = {}, ...children) {
-    const container = tdiv(__spreadValues({ class: `toggle-page ${className}` }, attr), ...children);
-    container.onclick = (e) => {
-      e.stopPropagation();
-    };
-    function toggle() {
-      if (container.classList.contains("open")) {
-        container.classList.remove("open");
-        return;
-      } else {
-        container.classList.add("open");
-      }
-    }
-    return { element: container, toggle };
-  }
-
-  // src/interfaces/browser.ts
-  var Browser = class {
-    static get isFirefox() {
-      return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
-    }
-    static get browser() {
-      if (chrome) {
-        return chrome;
-      } else {
-        return browser;
-      }
-    }
-  };
-
-  // src/handler/messagehandler.ts
-  var MessageHandler = class {
-    static send(message, callback) {
-      Browser.browser.runtime.sendMessage(message, (response) => {
-        var lastError = Browser.browser.runtime.lastError;
-        if (lastError) {
-          console.error("[MessageHandler] Error: %s", lastError.message);
-          return;
-        }
-        if (callback)
-          callback(response);
-      });
-    }
-    static addChannel(channel) {
-      this.send({ type: "add-channel", channel });
-    }
-    static removeChannel(channel) {
-      this.send({ type: "remove-channel", channel });
-    }
-    static onMessage(callback) {
-      Browser.browser.runtime.onMessage.addListener(() => callback());
-    }
-  };
-
   // src/object/abstract/identifiable.ts
   var Identifiable = class _Identifiable {
     constructor(id, name) {
@@ -247,10 +97,17 @@
       this.name = name;
     }
     static generateUUID() {
-      const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-        return (c === "x" ? Math.random() * 16 | 0 : (Math.random() * 16 | 0) & 3 | 8).toString(16);
-      });
+      const uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+        /[xy]/g,
+        function(c) {
+          return (c === "x" ? Math.random() * 16 | 0 : (Math.random() * 16 | 0) & 3 | 8).toString(16);
+        }
+      );
       return uuid;
+    }
+    static generateIdentifiable(name) {
+      const id = _Identifiable.generateUUID();
+      return new _Identifiable(id, name);
     }
     compare(other) {
       return this.id === other.id;
@@ -272,27 +129,8 @@
       this.dom = dom;
     }
     changeInjectionState(plus) {
-      if (!this.dom) return;
-      const element = this.dom.querySelector("#whitelist-spot");
-      if (!element) return;
-      if (plus) {
-        element.innerHTML = `<h2>+</h2>`;
-      } else {
-        element.innerHTML = `<h2>-</h2>`;
-      }
     }
     refresh() {
-      if (!this.dom) return;
-      if (ChromeExtension.enabled) {
-        if (this.disabled) {
-          this.dom.style.display = "none";
-        } else {
-          this.dom.style.display = "block";
-        }
-      } else {
-        this.dom.style.display = "block";
-      }
-      this.changeInjectionState(this.disabled);
     }
     disable() {
       if (this.disabled) return;
@@ -320,31 +158,6 @@
         this.injected = true;
         return;
       }
-      const element = tdiv();
-      if (!this.disabled)
-        element.innerHTML = `<h2>-</h2>`;
-      else
-        element.innerHTML = `<h2>+</h2>`;
-      element.id = "whitelist-spot";
-      const onclick_function = () => {
-        if (this.disabled) {
-          MessageHandler.addChannel(channel.name);
-          ChromeExtension.addAllowedChannel(channel.name);
-          this.enable();
-          channel.enable();
-        } else {
-          MessageHandler.removeChannel(channel.name);
-          ChromeExtension.removeAllowedChannel(channel.name);
-          this.disable();
-          channel.disable();
-        }
-      };
-      element.onclick = onclick_function.bind(this);
-      element.onmousedown = (_) => {
-        onclick_function();
-      };
-      this.dom.appendChild(element);
-      this.dom.dataset.whitelisted = "true";
     }
   };
 
@@ -416,6 +229,44 @@
         return { name: "", id: "" };
       }
       return { video: new Video((_a = getTitleAndID().id) != null ? _a : "", getTitleAndID().title, false, video_dom), channelname: getChannelName() };
+    }
+  };
+
+  // src/interfaces/browser.ts
+  var Browser = class {
+    static get isFirefox() {
+      return navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
+    }
+    static get browser() {
+      if (chrome) {
+        return chrome;
+      } else {
+        return browser;
+      }
+    }
+  };
+
+  // src/handler/messagehandler.ts
+  var MessageHandler = class {
+    static send(message, callback) {
+      Browser.browser.runtime.sendMessage(message, (response) => {
+        const lastError = Browser.browser.runtime.lastError;
+        if (lastError) {
+          console.error("[MessageHandler] Error: %s", lastError.message);
+          return;
+        }
+        if (callback)
+          callback(response);
+      });
+    }
+    static addChannel(channel) {
+      this.send({ type: "add-channel", channel });
+    }
+    static removeChannel(channel) {
+      this.send({ type: "remove-channel", channel });
+    }
+    static onMessage(callback) {
+      Browser.browser.runtime.onMessage.addListener(() => callback());
     }
   };
 
@@ -618,6 +469,53 @@
     }
   };
 
+  // src/framework/state/state.ts
+  var State = class {
+    constructor(state) {
+      this._events = /* @__PURE__ */ new Map();
+      this.state = state;
+    }
+    stateValue() {
+      return this.state;
+    }
+    setState(newState) {
+      this.state = newState;
+      this._events.forEach((callback) => callback(newState));
+    }
+    deleteEvent(id) {
+      if (this._events.has(id)) {
+        this._events.delete(id);
+      } else {
+        console.warn(`Event with id ${id} does not exist.`);
+      }
+    }
+    effect(effect) {
+      const id = Identifiable.generateIdentifiable(`effect_func.${this._events.size}`);
+      this._events.set(id, (newState) => {
+        if (newState !== void 0) {
+          effect(newState);
+        }
+      });
+      return () => {
+        this._events.delete(id);
+      };
+    }
+  };
+  function createState(initialState) {
+    const statePrototype = new State(initialState);
+    const fxState = () => statePrototype.stateValue.bind(statePrototype)();
+    fxState.set = (newState) => {
+      statePrototype.setState.bind(statePrototype)(newState);
+    };
+    fxState.effect = (effect) => {
+      const cleanup = () => console.warn("No cleanup function provided");
+      return () => {
+        cleanup();
+      };
+    };
+    return fxState;
+  }
+
   // src/index.ts
   var ChannelCache = class {
     //Channel
@@ -656,29 +554,6 @@
       this.channels = [];
     }
   };
-  var Serializer = class {
-    static importChannels(channels) {
-      try {
-        const json_parsed = JSON.parse(channels);
-        if (Array.isArray(json_parsed)) {
-          return json_parsed;
-        }
-        throw new Error(`Invalid JSON : (${channels})`);
-      } catch (e) {
-        console.error("[serializer::import] Error: %s (obj: %s)", e, channels);
-        return void 0;
-      }
-    }
-    static exportChannels(channels) {
-      try {
-        const json_channels = JSON.stringify(channels);
-        return json_channels;
-      } catch (e) {
-        console.error("[serializer::export] Error: %s", e);
-        return void 0;
-      }
-    }
-  };
   var _ChromeExtension = class _ChromeExtension {
     constructor(allowed_channels) {
       this.channels = new ChannelCache();
@@ -710,91 +585,13 @@
       });
     }
     static async generateTogglePage() {
-      const channel_input = tinput("text", "Input Channel JSON Here", "");
-      const flex = tflex(
-        ["column", "wrap"],
-        "gap-02",
-        {},
-        th2("Channel Serializer"),
-        channel_input.input,
-        tflex(
-          ["column", "align-center"],
-          "gap-01",
-          {},
-          tbutton(() => {
-            const channels = Serializer.importChannels(channel_input.state.state());
-            if (channels) {
-              MessageHandler.send({ type: "set-channels", channels }, () => {
-                _ChromeExtension.refreshChannels();
-              });
-            } else {
-              alert("Invalid JSON/ChannelScript");
-            }
-          }, "Submit", "fill-width")
-        ),
-        tbutton(() => {
-          const export_string = Serializer.exportChannels(_ChromeExtension.allowed_channels);
-          console.log("[serializer] Exporting: %s", export_string);
-          navigator.clipboard.writeText(export_string != null ? export_string : "[]").then(() => {
-            console.log("[serializer] Copied to clipboard");
-          }).catch((err) => {
-            console.error("[serializer] Error: %s (clipboard failed)", err);
-          });
-          alert("Channels exported to clipboard");
-        }, "Channels to Clipboard", "fill-width")
-      );
-      const page = t_toggle_page("right-0", {}, flex);
-      return page;
     }
     static async generateSerializerDiv() {
-      const small_page = await this.generateTogglePage();
-      const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
-      div.onclick = () => {
-        small_page.toggle();
-      };
-      return div;
     }
     static async generateToggleDiv() {
-      const div = tdiv({ id: "wt-toggle" });
-      _ChromeExtension.enabled = await _ChromeExtension.getEnabled();
-      if (_ChromeExtension.enabled) {
-        div.innerHTML = `<h2>Enabled</h2>`;
-        div.classList.add("on");
-      } else {
-        div.innerHTML = `<h2>Disabled</h2>`;
-        div.classList.remove("on");
-      }
-      div.onclick = () => {
-        _ChromeExtension.enabled = !_ChromeExtension.enabled;
-        _ChromeExtension.setEnabled(_ChromeExtension.enabled);
-        if (_ChromeExtension.enabled) {
-          div.innerHTML = `<h2>Enabled</h2>`;
-          div.classList.add("on");
-        } else {
-          div.innerHTML = `<h2>Disabled</h2>`;
-          div.classList.remove("on");
-        }
-      };
-      return div;
+      _ChromeExtension.enabled.set(await _ChromeExtension.getEnabled());
     }
     static async generateAddDiv(channel) {
-      const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel } });
-      if (_ChromeExtension.allowed_channels.includes(channel))
-        div.innerHTML = `<h2>Blacklist Channel</h2>`;
-      else
-        div.innerHTML = `<h2>Whitelist Channel</h2>`;
-      div.onclick = () => {
-        const channel_name_dataset = div.dataset.channel;
-        if (!channel_name_dataset) return;
-        if (_ChromeExtension.allowed_channels.includes(channel_name_dataset != null ? channel_name_dataset : "")) {
-          _ChromeExtension.removeAllowedChannel(channel_name_dataset != null ? channel_name_dataset : "");
-          div.innerHTML = `<h2>Whitelist Channel</h2>`;
-        } else {
-          _ChromeExtension.addAllowedChannel(channel_name_dataset != null ? channel_name_dataset : "");
-          div.innerHTML = `<h2>Blacklist Channel</h2>`;
-        }
-      };
-      return div;
     }
     async injectHeader() {
       const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
@@ -805,8 +602,6 @@
       const injection_check = injection_spot.querySelector("#wt-toggle");
       if (injection_check) return;
       const toggle_div = await _ChromeExtension.generateToggleDiv();
-      injection_spot.appendChild(toggle_div);
-      await this.injectSeralizerButton();
     }
     async injectSeralizerButton() {
       const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
@@ -816,8 +611,6 @@
       if (!buttons_container || !injection_spot) return;
       const injection_check = injection_spot.querySelector("#wt-serializer");
       if (injection_check) return;
-      const serializer_div = await _ChromeExtension.generateSerializerDiv();
-      injection_spot.appendChild(serializer_div);
     }
     async getChannelNameFromChannelPage() {
       if (_ChromeExtension.page_instance.page !== "channel") {
@@ -988,7 +781,7 @@
   _ChromeExtension.allowed_channels = [];
   //string
   _ChromeExtension.page_instance = new PageHandler();
-  _ChromeExtension.enabled = true;
+  _ChromeExtension.enabled = createState(false);
   var ChromeExtension = _ChromeExtension;
   async function inject(..._) {
     const ce = new ChromeExtension([]);
