@@ -496,9 +496,7 @@
           effect(newState);
         }
       });
-      return () => {
-        this._events.delete(id);
-      };
+      return this.deleteEvent.bind(this, id);
     }
   };
   function createState(initialState) {
@@ -507,12 +505,7 @@
     fxState.set = (newState) => {
       statePrototype.setState.bind(statePrototype)(newState);
     };
-    fxState.effect = (effect) => {
-      const cleanup = () => console.warn("No cleanup function provided");
-      return () => {
-        cleanup();
-      };
-    };
+    fxState.effect = statePrototype.effect.bind(statePrototype);
     return fxState;
   }
 
@@ -590,24 +583,39 @@
     }
     static async generateToggleDiv() {
       _ChromeExtension.enabled.set(await _ChromeExtension.getEnabled());
+      _ChromeExtension.enabled.effect((enabled) => {
+        console.log("[toggle] Enabled state changed: %s", enabled);
+      });
     }
     static async generateAddDiv(channel) {
     }
     async injectHeader() {
-      const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+      const header = document.getElementsByTagName(
+        YoutubeSettings.generic.header.container.tag
+      )[0];
       if (!header) return;
-      const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
-      const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
+      const buttons_container = header.querySelector(
+        "#" + YoutubeSettings.generic.header.buttons.id
+      );
+      const injection_spot = header.querySelector(
+        "#" + YoutubeSettings.generic.header.buttons.inject.id
+      );
       if (!buttons_container || !injection_spot) return;
       const injection_check = injection_spot.querySelector("#wt-toggle");
       if (injection_check) return;
       const toggle_div = await _ChromeExtension.generateToggleDiv();
     }
     async injectSeralizerButton() {
-      const header = document.getElementsByTagName(YoutubeSettings.generic.header.container.tag)[0];
+      const header = document.getElementsByTagName(
+        YoutubeSettings.generic.header.container.tag
+      )[0];
       if (!header) return;
-      const buttons_container = header.querySelector("#" + YoutubeSettings.generic.header.buttons.id);
-      const injection_spot = header.querySelector("#" + YoutubeSettings.generic.header.buttons.inject.id);
+      const buttons_container = header.querySelector(
+        "#" + YoutubeSettings.generic.header.buttons.id
+      );
+      const injection_spot = header.querySelector(
+        "#" + YoutubeSettings.generic.header.buttons.inject.id
+      );
       if (!buttons_container || !injection_spot) return;
       const injection_check = injection_spot.querySelector("#wt-serializer");
       if (injection_check) return;
@@ -616,19 +624,20 @@
       if (_ChromeExtension.page_instance.page !== "channel") {
         return;
       }
-      ;
-      const channel_container = document.getElementsByTagName(YoutubeSettings.channel.channel.container)[0];
+      const channel_container = document.getElementsByTagName(
+        YoutubeSettings.channel.channel.container
+      )[0];
       if (!channel_container) {
         console.log("[channel] No channel container");
         return;
       }
-      ;
-      const channel_tag = channel_container.querySelector(YoutubeSettings.channel.channel.tag);
+      const channel_tag = channel_container.querySelector(
+        YoutubeSettings.channel.channel.tag
+      );
       if (!channel_tag) {
         console.log("[channel] No channel tag");
         return;
       }
-      ;
       const channel_name = channel_tag.innerText;
       return channel_name;
     }
@@ -650,7 +659,11 @@
         div.dataset = { channel: channel_name };
       }
       if (((_a = div.dataset) == null ? void 0 : _a.channel) !== channel_name) {
-        console.warn("[channel] Channel name mismatch (expected: %s, got: %s)", (_b = div.dataset) == null ? void 0 : _b.channel, channel_name);
+        console.warn(
+          "[channel] Channel name mismatch (expected: %s, got: %s)",
+          (_b = div.dataset) == null ? void 0 : _b.channel,
+          channel_name
+        );
         div.dataset.channel = channel_name;
       }
       if (_ChromeExtension.allowed_channels.includes(channel_name)) {
@@ -666,17 +679,26 @@
       const channel_name = (_a = await this.getChannelNameFromChannelPage()) != null ? _a : "";
       if (injection_check.length > 0) {
         if (injection_check.length >= 2) {
-          console.warn("[channel] Too many Channel Injections, deleting all but one");
+          console.warn(
+            "[channel] Too many Channel Injections, deleting all but one"
+          );
           for (let i = 1; i < injection_check.length; i++) {
             injection_check[i].remove();
           }
         }
         if (!injection_check[0]) return;
-        await this.refreshChannelInjection(injection_check[0], channel_name != null ? channel_name : "");
+        await this.refreshChannelInjection(
+          injection_check[0],
+          channel_name != null ? channel_name : ""
+        );
         return;
       }
-      const container = await PageHandler.WaitForElement(() => document.querySelector(`#` + YoutubeSettings.channel.inject.container.id));
-      const injection_spot = container.querySelector("#" + YoutubeSettings.channel.inject.injection_spot.id);
+      const container = await PageHandler.WaitForElement(
+        () => document.querySelector(`#` + YoutubeSettings.channel.inject.container.id)
+      );
+      const injection_spot = container.querySelector(
+        "#" + YoutubeSettings.channel.inject.injection_spot.id
+      );
       if (!injection_spot) {
         console.log("[channel] No injection spot");
         return;
@@ -690,7 +712,9 @@
     async deleteShorts() {
       console.log("[inject] Deleting Shorts...");
       const _deleteShorts = () => {
-        const shorts = document.getElementsByTagName(YoutubeSettings.home.shorts.tag);
+        const shorts = document.getElementsByTagName(
+          YoutubeSettings.home.shorts.tag
+        );
         for (let i = 0; i < shorts.length; i++) {
           const short = shorts[i];
           short.style.display = "none";
@@ -711,11 +735,17 @@
           switch (_ChromeExtension.currentPage) {
             case "channel":
             case "home":
-              return document.getElementsByTagName(YoutubeSettings.home.container);
+              return document.getElementsByTagName(
+                YoutubeSettings.home.container
+              );
             case "video":
-              return document.getElementsByTagName(YoutubeSettings.video.container);
+              return document.getElementsByTagName(
+                YoutubeSettings.video.container
+              );
             default:
-              return document.getElementsByTagName(YoutubeSettings.home.container);
+              return document.getElementsByTagName(
+                YoutubeSettings.home.container
+              );
           }
         };
         let containers = getContainers();
@@ -724,11 +754,17 @@
           switch (_ChromeExtension.currentPage) {
             case "channel":
             case "home":
-              videos = containers[i].getElementsByTagName(YoutubeSettings.home.yt_video);
+              videos = containers[i].getElementsByTagName(
+                YoutubeSettings.home.yt_video
+              );
               break;
             case "video":
-              videos = containers[i].getElementsByTagName(YoutubeSettings.video.yt_video);
-              const circles = containers[i].getElementsByTagName(YoutubeSettings.video.yt_circle);
+              videos = containers[i].getElementsByTagName(
+                YoutubeSettings.video.yt_video
+              );
+              const circles = containers[i].getElementsByTagName(
+                YoutubeSettings.video.yt_circle
+              );
               for (let i2 = 0; i2 < circles.length; i2++) {
                 const circle = circles[i2];
                 circle.style.opacity = "0";
@@ -740,20 +776,28 @@
           for (let z = 0; z < videos.length; z++) {
             const video_dom = videos[z];
             const videof_obj = VideoFactory.createVideo(video_dom);
-            const _channel = this.channels.addChannel(new Channel(videof_obj.channelname.name, videof_obj.channelname.name));
-            if (_channel)
-              _channel.addVideo(videof_obj.video);
+            const _channel = this.channels.addChannel(
+              new Channel(
+                videof_obj.channelname.name,
+                videof_obj.channelname.name
+              )
+            );
+            if (_channel) _channel.addVideo(videof_obj.video);
           }
         }
       };
       _ChromeExtension.page_instance.onVideoRefresh = _grabVideos;
     }
     async disableVideos() {
-      let banned_channels = this.channels.channels.filter((channel) => !_ChromeExtension.allowed_channels.includes(channel.name));
+      let banned_channels = this.channels.channels.filter(
+        (channel) => !_ChromeExtension.allowed_channels.includes(channel.name)
+      );
       banned_channels.forEach((channel) => channel.disable());
     }
     async enableVideos() {
-      let allowed_channels = this.channels.channels.filter((channel) => _ChromeExtension.allowed_channels.includes(channel.name));
+      let allowed_channels = this.channels.channels.filter(
+        (channel) => _ChromeExtension.allowed_channels.includes(channel.name)
+      );
       allowed_channels.forEach((channel) => channel.enable());
     }
     startVideoDisableLoop() {
@@ -773,7 +817,10 @@
     }
     static removeAllowedChannel(channel_name) {
       if (_ChromeExtension.allowed_channels.includes(channel_name)) {
-        _ChromeExtension.allowed_channels.splice(_ChromeExtension.allowed_channels.indexOf(channel_name), 1);
+        _ChromeExtension.allowed_channels.splice(
+          _ChromeExtension.allowed_channels.indexOf(channel_name),
+          1
+        );
         MessageHandler.removeChannel(channel_name);
       }
     }
@@ -796,22 +843,24 @@
     ce.search();
     ce.startVideoDisableLoop();
     ce.deleteShorts();
-    Browser.browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
-      if (request.type === "update") {
-        ChromeExtension.page_instance.refreshPage((page, updated) => {
-          if (page === "channel" && updated) {
-            ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
-              ce.injectChannel();
-              ce.injectHeader();
-            });
-          }
-        });
-        ce.clearCache();
-      } else if (request.type === "update-channels") {
-        console.log("[injector] Updating Channels");
-        ce.refreshCache();
+    Browser.browser.runtime.onMessage.addListener(
+      (request, _sender, _sendResponse) => {
+        if (request.type === "update") {
+          ChromeExtension.page_instance.refreshPage((page, updated) => {
+            if (page === "channel" && updated) {
+              ChromeExtension.page_instance.WaitUntilHeaderLoaded(() => {
+                ce.injectChannel();
+                ce.injectHeader();
+              });
+            }
+          });
+          ce.clearCache();
+        } else if (request.type === "update-channels") {
+          console.log("[injector] Updating Channels");
+          ce.refreshCache();
+        }
       }
-    });
+    );
     return true;
   }
   inject();

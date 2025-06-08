@@ -1,7 +1,7 @@
 import { Dispatch } from "interfaces/dispatch";
 import { Identifiable } from "object/abstract/identifiable";
 
-type Effect<ObjectType> = Dispatch<ObjectType, Dispatch<void,void>>;
+type Effect<ObjectType> = Dispatch<Dispatch<ObjectType,void>, Dispatch<void,void>>;
 
 export type FxState<ObjectType> = {
 	(): ObjectType | undefined;
@@ -42,9 +42,7 @@ export class State<ObjectType> {
 				effect(newState);
 			}
 		});
-		return () => {
-			this._events.delete(id);
-		};
+		return this.deleteEvent.bind(this, id);
 	}
 
 }
@@ -58,12 +56,7 @@ export function createState<ObjectType>(initialState?: ObjectType): FxState<Obje
 		statePrototype.setState.bind(statePrototype)(newState);
 	};
 
-	fxState.effect = (effect: (newState: ObjectType) => () => void) => {
-		const cleanup = () => console.warn("No cleanup function provided");
-		return () => {
-			cleanup();
-		};
-	}
+	fxState.effect = statePrototype.effect.bind(statePrototype) as Effect<ObjectType>; 
 
 	return fxState;
 }
