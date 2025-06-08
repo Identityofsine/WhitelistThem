@@ -1,6 +1,7 @@
 import { Component } from "framework/element/component";
 import { createState, FxState } from "framework/state/state";
 import { InputComponent } from "./InputComponent";
+import { Serializer } from "index";
 
 const TEMPLATE = 
 `
@@ -11,6 +12,7 @@ const TEMPLATE =
 			<h2 class="tag">Channel Serializer: {1} Channel(s)</h2>
 			<input-box class="fill-width">
 			</input-box>
+			<span class="tag error">{2}</span>
 			<div class="flex column wrap gap-01"> 
 			</div>
 		</div>
@@ -30,6 +32,8 @@ export class SyncPage extends Component {
 	private readonly channelList: FxState<string[]>;
 	private readonly channelListJSON: FxState<string>;
   private readonly channelListLength: FxState<number>
+	private readonly errorMessage: FxState<string> = createState("");	
+	private inputComponent?: InputComponent;
 
 	constructor({states}: SyncPageProps) {
 		super({
@@ -42,10 +46,28 @@ export class SyncPage extends Component {
 
 		this.channelList.effect((list) => {
 			this.channelListLength.set(list.length);
-			this.channelListJSON.set(JSON.stringify(list) ?? "");
+			const json = Serializer.exportChannels(list);
+			this.channelListJSON.set(json ?? "[]");
 		});
 
-		super.setContent(TEMPLATE, this.open, this.channelListLength);
+		this.channelListJSON.effect((json) => {
+			try {
+				const object = Serializer.importChannels(json);
+				if (Array.isArray(object)) {
+					this.channelList.set([...object]);
+					this.errorMessage.set("");
+				} else {
+					this.errorMessage.set("Invalid JSON format for channel list (Must be an Array). This will not be saved.");
+					console.error("Invalid JSON format for channel list:", json);
+				}
+			}
+			catch (e) {
+				this.errorMessage.set("Invalid JSON format for channel list. This will not be saved.");
+				console.error("Invalid JSON format for channel list:", e);
+			}
+		});
+
+		super.setContent(TEMPLATE, this.open, this.channelListLength, this.errorMessage);
 
 		super.onClick(() => {
 			this.open.set(!this.open());
@@ -61,10 +83,12 @@ export class SyncPage extends Component {
 		}
 		const inputBox = this.elementRef.querySelector("input-box"); 
 		if (inputBox) {
-			const input = new InputComponent({
-				valueState: this.channelListJSON,
-			})
-			inputBox.appendChild(input.elementRef);
+			if (!this.inputComponent) {
+				this.inputComponent = new InputComponent({
+					valueState: this.channelListJSON,
+				})
+			}
+			inputBox.appendChild(this.inputComponent.elementRef);
 		}
 
 		super.postRender();

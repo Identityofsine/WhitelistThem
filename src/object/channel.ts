@@ -16,9 +16,7 @@ export class Channel extends Identifiable {
 			console.log(
 				`Channel ${this.name} is now ${state ? "disabled" : "enabled"}.`,
 			);
-			if (state) {
-				this.disableDisplayState.set(true);
-			}
+			this.disableDisplayState.set(state);
 		});
 		this.disableDisplayState.effect((state) => {
 			if (!state) {
@@ -61,7 +59,6 @@ export class Channel extends Identifiable {
 	}
 
 	enable() {
-		ChromeExtension.addAllowedChannel(this.name);
 		this.disabled.set(false);
 	}
 

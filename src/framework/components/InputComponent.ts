@@ -1,5 +1,5 @@
 import { Component } from "framework/element/component";
-import { FxState } from "framework/state/state";
+import { createState, FxState } from "framework/state/state";
 
 
 type InputComponentProps = {
@@ -9,26 +9,27 @@ type InputComponentProps = {
 
 export class InputComponent extends Component<HTMLInputElement> {
 
+	private readonly localState: FxState<string>;
+
 	constructor({	element, valueState }: InputComponentProps) {
 		super({
-			template: `{0}`,
 			element: element,
 			tag: "input",
-			states: [valueState],
 		})
+		this.localState = valueState; 
+		this.setContent(``, this.localState);
 	}
 
 	protected override postRender(): void {
-		this.elementRef.value = this._states?.[0]?.();
+		this.elementRef.value = this.localState?.() ?? "";
+		this.elementRef.type = "text";
 		this.elementRef.classList.add("tag");
-		this.elementRef.addEventListener("change", this.handleInput);
+		this.elementRef.addEventListener("input", (Event) => {
+			const input = Event.target as HTMLInputElement;
+			this.localState.set(input.value);
+		});
 		super.postRender();
 	}
 
-	private handleInput = (event: Event) => {
-		const input = event.target as HTMLInputElement;
-		if (this._states?.[0]) {
-			this._states[0].set(input.value);
-		}
-	}
+
 }

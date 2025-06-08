@@ -6,8 +6,7 @@ import { Channel } from "./object/channel";
 import "./styles/styles.scss";
 import "./styles/tagger.scss";
 import { Browser } from "./interfaces/browser";
-import { createState, FxState, State } from "framework/state/state";
-import { Component } from "framework/element/component";
+import { createState, FxState } from "framework/state/state";
 import { ToggleComponent } from "framework/components/ToggleComponent";
 import { SyncPage } from "framework/components/SyncPage";
 //check if page is still loading
@@ -54,7 +53,7 @@ class ChannelCache {
 	}
 }
 
-class Serializer {
+export class Serializer {
 	static importChannels(channels: string) {
 		try {
 			const json_parsed = JSON.parse(channels) as string[];
@@ -165,15 +164,6 @@ export class ChromeExtension {
 	}
 
 	static async generateSerializerDiv() {
-		/**
-		const small_page = await this.generateTogglePage();
-		const div = tdiv({ id: "wt-serializer" }, small_page.element, th2("Export/Import"));
-		div.onclick = () => {
-			small_page.toggle();
-		}
-
-		return div;
-		*/
 		return new SyncPage({
 			states: {
 				channelList: ChromeExtension.allowed_channels,
@@ -194,28 +184,6 @@ export class ChromeExtension {
 		});
 
 		return div;
-	}
-
-	static async generateAddDiv(channel: string) {
-		/**
-		const div = tdiv({ id: YoutubeSettings.channel.inject.injection_spot.inject_id, dataset: { channel: channel } });
-		if (ChromeExtension.allowed_channels.includes(channel))
-			div.innerHTML = `<h2>Blacklist Channel</h2>`;
-		else
-			div.innerHTML = `<h2>Whitelist Channel</h2>`;
-		div.onclick = () => {
-			const channel_name_dataset = div.dataset.channel;
-			if (!channel_name_dataset) return;
-			if (ChromeExtension.allowed_channels.includes(channel_name_dataset ?? "")) {
-				ChromeExtension.removeAllowedChannel(channel_name_dataset ?? "");
-				div.innerHTML = `<h2>Whitelist Channel</h2>`;
-			} else {
-				ChromeExtension.addAllowedChannel(channel_name_dataset ?? "");
-				div.innerHTML = `<h2>Blacklist Channel</h2>`;
-			}
-		}
-		return div;
-		*/
 	}
 
 	async injectHeader() {
@@ -349,8 +317,8 @@ export class ChromeExtension {
 			return;
 		}
 
-		const div = await ChromeExtension.generateAddDiv(channel_name);
-		injection_spot.appendChild(div);
+		//const div = await ChromeExtension.generateAddDiv(channel_name);
+		//injection_spot.appendChild(div);
 	}
 
 	async deleteShorts() {
@@ -461,6 +429,10 @@ export class ChromeExtension {
 		ChromeExtension.page_instance.onVideoRefresh = async () => {
 			this.disableVideos.bind(this)();
 		};
+		ChromeExtension.allowed_channels.effect(() => {
+			this.disableVideos.bind(this)();
+			this.enableVideos.bind(this)();
+		});
 	}
 
 	clearCache() {

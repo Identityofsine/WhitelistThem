@@ -682,9 +682,7 @@
         console.log(
           `Channel ${this.name} is now ${state ? "disabled" : "enabled"}.`
         );
-        if (state) {
-          this.disableDisplayState.set(true);
-        }
+        this.disableDisplayState.set(state);
       });
       this.disableDisplayState.effect((state) => {
         if (!state) {
@@ -723,7 +721,6 @@
       }
     }
     enable() {
-      ChromeExtension.addAllowedChannel(this.name);
       this.disabled.set(false);
     }
     disable() {
@@ -741,24 +738,21 @@
   var InputComponent = class extends Component {
     constructor({ element, valueState }) {
       super({
-        template: `{0}`,
         element,
-        tag: "input",
-        states: [valueState]
+        tag: "input"
       });
-      this.handleInput = (event) => {
-        var _a2;
-        const input = event.target;
-        if ((_a2 = this._states) == null ? void 0 : _a2[0]) {
-          this._states[0].set(input.value);
-        }
-      };
+      this.localState = valueState;
+      this.setContent(``, this.localState);
     }
     postRender() {
       var _a2, _b;
-      this.elementRef.value = (_b = (_a2 = this._states) == null ? void 0 : _a2[0]) == null ? void 0 : _b.call(_a2);
+      this.elementRef.value = (_b = (_a2 = this.localState) == null ? void 0 : _a2.call(this)) != null ? _b : "";
+      this.elementRef.type = "text";
       this.elementRef.classList.add("tag");
-      this.elementRef.addEventListener("change", this.handleInput);
+      this.elementRef.addEventListener("input", (Event) => {
+        const input = Event.target;
+        this.localState.set(input.value);
+      });
       super.postRender();
     }
   };
@@ -772,6 +766,7 @@
 			<h2 class="tag">Channel Serializer: {1} Channel(s)</h2>
 			<input-box class="fill-width">
 			</input-box>
+			<span class="tag error">{2}</span>
 			<div class="flex column wrap gap-01"> 
 			</div>
 		</div>
@@ -785,15 +780,31 @@
         tag: "sync-page"
       });
       this.open = createState(false);
+      this.errorMessage = createState("");
       this.channelList = states.channelList;
       this.channelListLength = createState((_b = (_a2 = this.channelList()) == null ? void 0 : _a2.length) != null ? _b : 0);
       this.channelListJSON = createState((_c = JSON.stringify(this.channelList())) != null ? _c : "");
       this.channelList.effect((list) => {
-        var _a3;
         this.channelListLength.set(list.length);
-        this.channelListJSON.set((_a3 = JSON.stringify(list)) != null ? _a3 : "");
+        const json = Serializer.exportChannels(list);
+        this.channelListJSON.set(json != null ? json : "[]");
       });
-      super.setContent(TEMPLATE2, this.open, this.channelListLength);
+      this.channelListJSON.effect((json) => {
+        try {
+          const object = Serializer.importChannels(json);
+          if (Array.isArray(object)) {
+            this.channelList.set([...object]);
+            this.errorMessage.set("");
+          } else {
+            this.errorMessage.set("Invalid JSON format for channel list (Must be an Array). This will not be saved.");
+            console.error("Invalid JSON format for channel list:", json);
+          }
+        } catch (e) {
+          this.errorMessage.set("Invalid JSON format for channel list. This will not be saved.");
+          console.error("Invalid JSON format for channel list:", e);
+        }
+      });
+      super.setContent(TEMPLATE2, this.open, this.channelListLength, this.errorMessage);
       super.onClick(() => {
         this.open.set(!this.open());
       });
@@ -807,10 +818,12 @@
       }
       const inputBox = this.elementRef.querySelector("input-box");
       if (inputBox) {
-        const input = new InputComponent({
-          valueState: this.channelListJSON
-        });
-        inputBox.appendChild(input.elementRef);
+        if (!this.inputComponent) {
+          this.inputComponent = new InputComponent({
+            valueState: this.channelListJSON
+          });
+        }
+        inputBox.appendChild(this.inputComponent.elementRef);
       }
       super.postRender();
     }
@@ -852,6 +865,29 @@
     }
     clearCache() {
       this.channels = [];
+    }
+  };
+  var Serializer = class {
+    static importChannels(channels) {
+      try {
+        const json_parsed = JSON.parse(channels);
+        if (Array.isArray(json_parsed)) {
+          return json_parsed;
+        }
+        throw new Error(`Invalid JSON : (${channels})`);
+      } catch (e) {
+        console.error("[serializer::import] Error: %s (obj: %s)", e, channels);
+        return void 0;
+      }
+    }
+    static exportChannels(channels) {
+      try {
+        const json_channels = JSON.stringify(channels);
+        return json_channels;
+      } catch (e) {
+        console.error("[serializer::export] Error: %s", e);
+        return void 0;
+      }
     }
   };
   var _ChromeExtension = class _ChromeExtension {
@@ -904,8 +940,6 @@
         }
       });
       return div;
-    }
-    static async generateAddDiv(channel) {
     }
     async injectHeader() {
       const header = document.getElementsByTagName(
@@ -1028,8 +1062,6 @@
       if (!channel_name) {
         return;
       }
-      const div = await _ChromeExtension.generateAddDiv(channel_name);
-      injection_spot.appendChild(div);
     }
     async deleteShorts() {
       console.log("[inject] Deleting Shorts...");
@@ -1138,6 +1170,10 @@
       _ChromeExtension.page_instance.onVideoRefresh = async () => {
         this.disableVideos.bind(this)();
       };
+      _ChromeExtension.allowed_channels.effect(() => {
+        this.disableVideos.bind(this)();
+        this.enableVideos.bind(this)();
+      });
     }
     clearCache() {
       this.channels.clearCache();
