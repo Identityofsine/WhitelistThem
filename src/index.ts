@@ -7,6 +7,8 @@ import "./styles/styles.scss";
 import "./styles/tagger.scss";
 import { Browser } from "./interfaces/browser";
 import { createState, FxState, State } from "framework/state/state";
+import { Component } from "framework/element/component";
+import { ToggleComponent } from "framework/components/ToggleComponent";
 //check if page is still loading
 
 class ChannelCache {
@@ -173,36 +175,17 @@ export class ChromeExtension {
 
 	static async generateToggleDiv() {
 		ChromeExtension.enabled.set(await ChromeExtension.getEnabled());
-		ChromeExtension.enabled.effect((enabled: boolean) => {
-			console.log("[toggle] Enabled state changed: %s", enabled);
+
+		const div = new ToggleComponent({
+			state: ChromeExtension.enabled,
+			onClick: () => {
+				const value = ChromeExtension.enabled();
+				ChromeExtension.enabled.set(!value);
+				ChromeExtension.setEnabled(!value);
+			},
 		});
 
-		/**
-		const div = tdiv({ id: "wt-toggle" });
-
-
-		if (ChromeExtension.enabled) {
-			div.innerHTML = `<h2>Enabled</h2>`;
-			div.classList.add("on");
-		}
-		else {
-			div.innerHTML = `<h2>Disabled</h2>`;
-			div.classList.remove("on");
-		}
-
-		div.onclick = () => {
-			ChromeExtension.enabled = !ChromeExtension.enabled;
-			ChromeExtension.setEnabled(ChromeExtension.enabled);
-			if (ChromeExtension.enabled) {
-				div.innerHTML = `<h2>Enabled</h2>`;
-				div.classList.add("on");
-			} else {
-				div.innerHTML = `<h2>Disabled</h2>`;
-				div.classList.remove("on");
-			}
-		}
 		return div;
-		*/
 	}
 
 	static async generateAddDiv(channel: string) {
@@ -239,11 +222,11 @@ export class ChromeExtension {
 			"#" + YoutubeSettings.generic.header.buttons.inject.id,
 		);
 		if (!buttons_container || !injection_spot) return;
-		const injection_check = injection_spot.querySelector("#wt-toggle");
+		const injection_check = injection_spot.querySelector("toggle-component");
 		if (injection_check) return;
 		const toggle_div = await ChromeExtension.generateToggleDiv();
+		injection_spot.appendChild(toggle_div.elementRef);
 		/**
-		injection_spot.appendChild(toggle_div);
 		await this.injectSeralizerButton();
 		*/
 	}
@@ -498,7 +481,7 @@ async function inject(..._: any[]) {
 
 	console.log("[injector] Injecting...");
 	ChromeExtension.page_instance.onVideoRefresh = () => {
-		ce.injectHeader();
+		//ce.injectHeader();
 		ce.injectChannel();
 		ce.channels.channels.forEach((channel) => {
 			channel.refresh();

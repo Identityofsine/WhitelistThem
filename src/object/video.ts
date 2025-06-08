@@ -13,6 +13,9 @@ export class Video extends Identifiable {
 		super(id, name);
 		this.isShort = isShort;
 		this.dom = dom;
+		ChromeExtension.enabled.effect(() => {
+			this.refresh();
+		});
 	}
 
 	changeInjectionState(plus: boolean) {
@@ -29,9 +32,8 @@ export class Video extends Identifiable {
 	}
 
 	refresh() {
-		/**
 		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
+		if (ChromeExtension.enabled()) {
 			if (this.disabled) {
 				this.dom.style.display = "none";
 			} else {
@@ -41,13 +43,12 @@ export class Video extends Identifiable {
 			this.dom.style.display = "block";
 		}
 		this.changeInjectionState(this.disabled);
-		*/
 	}
 
 	disable() {
 		if (this.disabled) return;
 		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
+		if (ChromeExtension.enabled()) {
 			this.dom.style.display = "none";
 		}
 
@@ -57,7 +58,7 @@ export class Video extends Identifiable {
 
 	enable() {
 		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
+		if (ChromeExtension.enabled()) {
 			this.dom.style.display = "block";
 		}
 		this.changeInjectionState(false);
@@ -107,5 +108,4 @@ export class Video extends Identifiable {
 		this.dom.dataset.whitelisted = 'true';
 		*/
 	}
-
 }

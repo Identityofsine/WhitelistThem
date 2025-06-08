@@ -127,15 +127,29 @@
       this.injected = false;
       this.isShort = isShort;
       this.dom = dom;
+      ChromeExtension.enabled.effect(() => {
+        this.refresh();
+      });
     }
     changeInjectionState(plus) {
     }
     refresh() {
+      if (!this.dom) return;
+      if (ChromeExtension.enabled()) {
+        if (this.disabled) {
+          this.dom.style.display = "none";
+        } else {
+          this.dom.style.display = "block";
+        }
+      } else {
+        this.dom.style.display = "block";
+      }
+      this.changeInjectionState(this.disabled);
     }
     disable() {
       if (this.disabled) return;
       if (!this.dom) return;
-      if (ChromeExtension.enabled) {
+      if (ChromeExtension.enabled()) {
         this.dom.style.display = "none";
       }
       this.changeInjectionState(true);
@@ -143,7 +157,7 @@
     }
     enable() {
       if (!this.dom) return;
-      if (ChromeExtension.enabled) {
+      if (ChromeExtension.enabled()) {
         this.dom.style.display = "block";
       }
       this.changeInjectionState(false);
@@ -509,6 +523,190 @@
     return fxState;
   }
 
+  // src/framework/element/component.ts
+  var REGEX_TEMPLATE = /\{\d+(.*?)\}/g;
+  var REGEX_TENTATIVE = /\{\d+\s*\?\s*[^:{}]+\s*:\s*[^{}]+\}/;
+  var REGEX_TENTATIVE_TRUE = /\?\s*([^:}]+?)\s*:/g;
+  var REGEX_TENTATIVE_FALSE = /:\s*([^}]+?)\s*}/g;
+  var REGEX_TENTATIVE_REMOVE_SYMBOL = /\{*\?*:*\}*[\s]*/g;
+  var REGEX_STATE = /\s*(\d+)/;
+  var Component = class {
+    constructor(props) {
+      this.htmlTemplate = ``;
+      this._states = [];
+      this._events$ = [];
+      var _a, _b, _c, _d;
+      this.setContent((_a = props == null ? void 0 : props.template) != null ? _a : ``, ...(_b = props == null ? void 0 : props.states) != null ? _b : []);
+      this.element = (_d = props == null ? void 0 : props.element) != null ? _d : document.createElement((_c = props == null ? void 0 : props.tag) != null ? _c : `div`);
+    }
+    get elementRef() {
+      return this.element;
+    }
+    /**
+    	* html template should be set like the java log4j2 template: <div>{}</div>
+    	*/
+    setContent(html, ...args) {
+      this.onDestroy();
+      if (args.length > 0) {
+        this._states = args;
+        this._states.forEach((state) => {
+          const event = state.effect(() => this.render());
+          this._events$.push(event);
+        });
+      }
+      this.htmlTemplate = html.replace(/[\n\r\t]/g, ``).trim();
+      this.render();
+    }
+    onDestroy() {
+      this._events$.forEach((event) => event());
+      this._events$ = [];
+    }
+    render() {
+      if (this.element) {
+        const htmlTemplateCount = (this.htmlTemplate.match(/{}/g) || []).length;
+        if (htmlTemplateCount !== this._states.length) {
+        }
+        const needToBeParsed = TemplateParser.parse(this.htmlTemplate);
+        needToBeParsed.forEach((item) => {
+          const stateIndex = item.stateIndex;
+          if (stateIndex >= 0 && stateIndex < this._states.length) {
+            const stateContent = this._states[stateIndex]();
+            if (stateContent !== void 0) {
+              item.updateValue(stateContent);
+            }
+          } else {
+            item.updateValue(``);
+          }
+        });
+        this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+      } else {
+        console.warn("Element is not defined, cannot render component.");
+      }
+    }
+    onClick(listener) {
+      if (this.element) {
+        this.element.addEventListener("click", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach click listener.");
+      }
+    }
+    onMouseOver(listener) {
+      if (this.element) {
+        this.element.addEventListener("mouseover", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach mouseover listener.");
+      }
+    }
+    onMouseOut(listener) {
+      if (this.element) {
+        this.element.addEventListener("mouseout", (event) => {
+          listener(event);
+        });
+      } else {
+        console.warn("Element is not defined, cannot attach mouseout listener.");
+      }
+    }
+  };
+  var TemplateParsed = class {
+    constructor(content, offset, source, stateIndex = -1) {
+      this.id = Identifiable.generateUUID();
+      //-1 = no state
+      this.stateIndex = -1;
+      this.offset = 0;
+      this.content = ``;
+      this.length = 0;
+      this.originalLength = 0;
+      this.source = ``;
+      this.content = content;
+      this.offset = offset;
+      this.source = source;
+      this.length = content.length;
+      this.originalLength = content.length;
+      this.stateIndex = stateIndex;
+    }
+    isTentative() {
+      return REGEX_TENTATIVE.test(this.content);
+    }
+    updateValue(value) {
+      var _a, _b;
+      const isTentative = this.isTentative();
+      if (isTentative) {
+        const tentativeTrue = (_a = this.content.match(REGEX_TENTATIVE_TRUE)) == null ? void 0 : _a.find((match) => match !== void 0);
+        const tentativeFalse = (_b = this.content.match(REGEX_TENTATIVE_FALSE)) == null ? void 0 : _b.find((match) => match !== void 0);
+        if (tentativeTrue && tentativeFalse) {
+          if (value) {
+            value = tentativeTrue.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
+          } else {
+            value = tentativeFalse.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
+          }
+        } else {
+          console.warn(`[TemplateParsed] Tentative expression is not valid: ${this.content}`);
+          return;
+        }
+      }
+      const content = this.content.replace(REGEX_TEMPLATE, value);
+      this.setContent(content);
+    }
+    setContent(content) {
+      this.content = content;
+      this.length = content.length;
+    }
+    getContent() {
+      return this.content;
+    }
+    get lengthValue() {
+      return this.length;
+    }
+  };
+  var TemplateParser = class {
+    static parse(template) {
+      const parsed = [];
+      for (const match of template.matchAll(REGEX_TEMPLATE)) {
+        const content = match[0];
+        const offset = match.index || 0;
+        const stateIndexMatch = content.match(REGEX_STATE);
+        const source = template;
+        const parsedItem = new TemplateParsed(content, offset, source, stateIndexMatch ? parseInt(stateIndexMatch[1], 10) : -1);
+        parsed.push(parsedItem);
+      }
+      return parsed;
+    }
+    static rebuild(template, parsed) {
+      let rebuiltTemplate = template;
+      let offsetDelta = 0;
+      parsed.forEach((item) => {
+        const offset = item.offset + offsetDelta;
+        if (item.stateIndex >= 0) {
+          const stateContent = item.getContent();
+          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + stateContent + rebuiltTemplate.slice(offset + item.originalLength);
+          offsetDelta += stateContent.length - item.originalLength;
+        } else {
+          rebuiltTemplate = rebuiltTemplate.slice(0, offset) + rebuiltTemplate.slice(offset);
+        }
+      });
+      return rebuiltTemplate;
+    }
+  };
+
+  // src/framework/components/ToggleComponent.ts
+  var TEMPLATE = `<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
+	<h2>{0 ? Enabled : Disabled}</h2>
+</div>`;
+  var ToggleComponent = class extends Component {
+    constructor({ state, onClick }) {
+      super({
+        tag: "toggle-component",
+        template: TEMPLATE,
+        states: [state]
+      });
+      onClick && this.onClick(onClick);
+    }
+  };
+
   // src/index.ts
   var ChannelCache = class {
     //Channel
@@ -583,9 +781,15 @@
     }
     static async generateToggleDiv() {
       _ChromeExtension.enabled.set(await _ChromeExtension.getEnabled());
-      _ChromeExtension.enabled.effect((enabled) => {
-        console.log("[toggle] Enabled state changed: %s", enabled);
+      const div = new ToggleComponent({
+        state: _ChromeExtension.enabled,
+        onClick: () => {
+          const value = _ChromeExtension.enabled();
+          _ChromeExtension.enabled.set(!value);
+          _ChromeExtension.setEnabled(!value);
+        }
       });
+      return div;
     }
     static async generateAddDiv(channel) {
     }
@@ -601,9 +805,10 @@
         "#" + YoutubeSettings.generic.header.buttons.inject.id
       );
       if (!buttons_container || !injection_spot) return;
-      const injection_check = injection_spot.querySelector("#wt-toggle");
+      const injection_check = injection_spot.querySelector("toggle-component");
       if (injection_check) return;
       const toggle_div = await _ChromeExtension.generateToggleDiv();
+      injection_spot.appendChild(toggle_div.elementRef);
     }
     async injectSeralizerButton() {
       const header = document.getElementsByTagName(
@@ -834,7 +1039,6 @@
     const ce = new ChromeExtension([]);
     console.log("[injector] Injecting...");
     ChromeExtension.page_instance.onVideoRefresh = () => {
-      ce.injectHeader();
       ce.injectChannel();
       ce.channels.channels.forEach((channel) => {
         channel.refresh();
