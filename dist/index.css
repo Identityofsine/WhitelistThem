@@ -53,26 +53,34 @@ toggle-component {
 }
 
 /* src/styles/tagger.scss */
-.toggle-page {
+.sync-page {
   min-width: 20rem;
   min-height: 30rem;
   padding: 4rem;
   background-color: #fff;
   border-radius: 0.25rem;
-  border: 2px solid #f0f0f0;
-  box-shadow: 0px 14px 64px rgba(68, 61, 46, 0.05);
+  border: 2px solid #e0e0e0;
+  box-shadow: 0px 14px 64px 5px rgba(68, 61, 46, 0.05);
   display: none;
   cursor: default;
+  right: 0;
   top: 130%;
 }
-.toggle-page.open {
+.sync-page.open {
   position: absolute;
   display: block;
+}
+.sync-page h2 {
+  font-size: 2.2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #101010;
 }
 input.tag {
   padding: 1.2rem 2rem;
   border: 1px solid #f0f0f0;
   border-radius: 0.25rem;
+  box-shadow: 0px 14px 64px rgba(68, 61, 46, 0.15);
   font-size: 1.6rem;
 }
 button.tag {
@@ -82,7 +90,7 @@ button.tag {
   padding: 0.8814rem 1.2029rem;
   border: solid 1.5px #fff;
   color: white;
-  box-shadow: 0px 14px 64px rgba(5, 5, 5, 0.05);
+  box-shadow: 0px 14px 64px rgba(5, 5, 5, 0.1);
   -moz-user-select: -moz-none;
   user-select: none;
   font-size: 2.4rem;

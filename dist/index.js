@@ -174,9 +174,13 @@
           }
         });
         this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+        this.postRender();
       } else {
         console.warn("Element is not defined, cannot render component.");
       }
+    }
+    // This method is called after the component has been rendered
+    postRender() {
     }
     onClick(listener) {
       if (this.element) {
@@ -733,6 +737,85 @@
     }
   };
 
+  // src/framework/components/InputComponent.ts
+  var InputComponent = class extends Component {
+    constructor({ element, valueState }) {
+      super({
+        template: `{0}`,
+        element,
+        tag: "input",
+        states: [valueState]
+      });
+      this.handleInput = (event) => {
+        var _a2;
+        const input = event.target;
+        if ((_a2 = this._states) == null ? void 0 : _a2[0]) {
+          this._states[0].set(input.value);
+        }
+      };
+    }
+    postRender() {
+      var _a2, _b;
+      this.elementRef.value = (_b = (_a2 = this._states) == null ? void 0 : _a2[0]) == null ? void 0 : _b.call(_a2);
+      this.elementRef.classList.add("tag");
+      this.elementRef.addEventListener("change", this.handleInput);
+      super.postRender();
+    }
+  };
+
+  // src/framework/components/SyncPage.ts
+  var TEMPLATE2 = `
+<div id="wt-serializer">
+	<h2>Export/Import</h2>
+	<div id="toggle-page" class="sync-page {0 ? open : close}">
+		<div class="tag flex column wrap">
+			<h2 class="tag">Channel Serializer: {1} Channel(s)</h2>
+			<input-box class="fill-width">
+			</input-box>
+			<div class="flex column wrap gap-01"> 
+			</div>
+		</div>
+	</div>
+</div>
+`;
+  var SyncPage = class extends Component {
+    constructor({ states }) {
+      var _a2, _b, _c;
+      super({
+        tag: "sync-page"
+      });
+      this.open = createState(false);
+      this.channelList = states.channelList;
+      this.channelListLength = createState((_b = (_a2 = this.channelList()) == null ? void 0 : _a2.length) != null ? _b : 0);
+      this.channelListJSON = createState((_c = JSON.stringify(this.channelList())) != null ? _c : "");
+      this.channelList.effect((list) => {
+        var _a3;
+        this.channelListLength.set(list.length);
+        this.channelListJSON.set((_a3 = JSON.stringify(list)) != null ? _a3 : "");
+      });
+      super.setContent(TEMPLATE2, this.open, this.channelListLength);
+      super.onClick(() => {
+        this.open.set(!this.open());
+      });
+    }
+    postRender() {
+      const togglePage = this.elementRef.querySelector("#toggle-page");
+      if (togglePage) {
+        togglePage.addEventListener("click", (e) => {
+          e.stopPropagation();
+        });
+      }
+      const inputBox = this.elementRef.querySelector("input-box");
+      if (inputBox) {
+        const input = new InputComponent({
+          valueState: this.channelListJSON
+        });
+        inputBox.appendChild(input.elementRef);
+      }
+      super.postRender();
+    }
+  };
+
   // src/index.ts
   var ChannelCache = class {
     //Channel
@@ -776,7 +859,7 @@
       this.channels = new ChannelCache();
       this.searching = false;
       this.started = false;
-      _ChromeExtension.allowed_channels = allowed_channels;
+      _ChromeExtension.allowed_channels.set(allowed_channels);
       _ChromeExtension.page_instance.start();
       this.start();
     }
@@ -797,13 +880,18 @@
     async start() {
       MessageHandler.send({ type: "get-channels" }, (response) => {
         if (response.type === "query-channels") {
-          _ChromeExtension.allowed_channels = response.channels;
+          _ChromeExtension.allowed_channels.set(response.channels);
         }
       });
     }
     static async generateTogglePage() {
     }
     static async generateSerializerDiv() {
+      return new SyncPage({
+        states: {
+          channelList: _ChromeExtension.allowed_channels
+        }
+      });
     }
     static async generateToggleDiv() {
       _ChromeExtension.enabled.set(await _ChromeExtension.getEnabled());
@@ -835,6 +923,7 @@
       if (injection_check) return;
       const toggle_div = await _ChromeExtension.generateToggleDiv();
       injection_spot.appendChild(toggle_div.elementRef);
+      await this.injectSeralizerButton();
     }
     async injectSeralizerButton() {
       const header = document.getElementsByTagName(
@@ -848,8 +937,10 @@
         "#" + YoutubeSettings.generic.header.buttons.inject.id
       );
       if (!buttons_container || !injection_spot) return;
-      const injection_check = injection_spot.querySelector("#wt-serializer");
+      const injection_check = injection_spot.querySelector("sync-page");
       if (injection_check) return;
+      const serializer_div = await _ChromeExtension.generateSerializerDiv();
+      injection_spot.appendChild(serializer_div.elementRef);
     }
     async getChannelNameFromChannelPage() {
       if (_ChromeExtension.page_instance.page !== "channel") {
@@ -873,16 +964,16 @@
       return channel_name;
     }
     static async refreshChannels() {
-      _ChromeExtension.allowed_channels = [];
+      _ChromeExtension.allowed_channels.set([]);
       MessageHandler.send({ type: "get-channels" }, (response) => {
         if (response.type === "query-channels") {
           console.log("[serializer] Refreshing channels");
-          _ChromeExtension.allowed_channels = response.channels;
+          _ChromeExtension.allowed_channels.set(response.channels);
         }
       });
     }
     async refreshChannelInjection(div, channel_name) {
-      var _a2, _b;
+      var _a2, _b, _c;
       if (!div) {
         return;
       }
@@ -897,7 +988,7 @@
         );
         div.dataset.channel = channel_name;
       }
-      if (_ChromeExtension.allowed_channels.includes(channel_name)) {
+      if ((_c = _ChromeExtension.allowed_channels()) == null ? void 0 : _c.includes(channel_name)) {
         div.innerHTML = `<h2>Blacklist Channel</h2>`;
       } else {
         div.innerHTML = `<h2>Whitelist Channel</h2>`;
@@ -1021,7 +1112,10 @@
     }
     async disableVideos() {
       let banned_channels = this.channels.channels.filter(
-        (channel) => !_ChromeExtension.allowed_channels.includes(channel.name)
+        (channel) => {
+          var _a2;
+          return !((_a2 = _ChromeExtension.allowed_channels()) == null ? void 0 : _a2.includes(channel.name));
+        }
       );
       banned_channels.forEach(async (channel) => {
         if (channel.disabledState === false) {
@@ -1032,7 +1126,10 @@
     }
     async enableVideos() {
       let allowed_channels = this.channels.channels.filter(
-        (channel) => _ChromeExtension.allowed_channels.includes(channel.name)
+        (channel) => {
+          var _a2;
+          return (_a2 = _ChromeExtension.allowed_channels()) == null ? void 0 : _a2.includes(channel.name);
+        }
       );
       allowed_channels.forEach((channel) => channel.enable());
     }
@@ -1048,22 +1145,30 @@
     refreshCache() {
     }
     static addAllowedChannel(channel_name, callback) {
-      if (!_ChromeExtension.allowed_channels.includes(channel_name)) {
-        _ChromeExtension.allowed_channels.push(channel_name);
+      var _a2, _b, _c;
+      if (!((_a2 = _ChromeExtension.allowed_channels()) == null ? void 0 : _a2.includes(channel_name))) {
+        (_c = _ChromeExtension.allowed_channels) == null ? void 0 : _c.set([
+          ...(_b = _ChromeExtension.allowed_channels()) != null ? _b : [],
+          channel_name
+        ]);
         MessageHandler.addChannel(channel_name, callback);
       }
     }
     static removeAllowedChannel(channel_name, callback) {
-      if (_ChromeExtension.allowed_channels.includes(channel_name)) {
-        _ChromeExtension.allowed_channels.splice(
-          _ChromeExtension.allowed_channels.indexOf(channel_name),
-          1
+      var _a2, _b, _c;
+      if ((_a2 = _ChromeExtension.allowed_channels()) == null ? void 0 : _a2.includes(channel_name)) {
+        _ChromeExtension.allowed_channels.set(
+          (_c = (_b = _ChromeExtension.allowed_channels()) == null ? void 0 : _b.filter(
+            (name) => name !== channel_name
+          )) != null ? _c : []
         );
         MessageHandler.removeChannel(channel_name, callback);
       }
     }
   };
-  _ChromeExtension.allowed_channels = [];
+  _ChromeExtension.allowed_channels = createState(
+    []
+  );
   //string
   _ChromeExtension.page_instance = new PageHandler();
   _ChromeExtension.enabled = createState(false);

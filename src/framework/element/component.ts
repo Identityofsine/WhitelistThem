@@ -10,27 +10,27 @@ const REGEX_TENTATIVE_FALSE = /:\s*([^}]+?)\s*}/g;
 const REGEX_TENTATIVE_REMOVE_SYMBOL = /\{*\?*:*\}*[\s]*/g;
 const REGEX_STATE = /\s*(\d+)/
 
-export type ComponentProps = {
+export type ComponentProps<T extends HTMLElement = HTMLElement> = {
 	tag?: string;
 	template?: string;
 	states?: FxState<any>[];
-	element?: HTMLElement;
+	element?: T;
 }
 
-export class Component implements HTMLActions  {
+export class Component<T extends HTMLElement = HTMLElement> implements HTMLActions  {
 
-	private element: HTMLElement;
+	private element: T;
 	private htmlTemplate: string = ``; 
-	private _states: FxState<any>[] = [];
+	protected _states: FxState<any>[] = [];
 	private _events$: Dispatch<void, void>[] = [];
 
-	constructor(props?: ComponentProps) {
+	constructor(props?: ComponentProps<T>) {
 		const tag = props?.tag ?? 'component';
-		this.element = props?.element ?? document.createElement(tag);
+		this.element = props?.element ?? document.createElement(tag) as T;
 		this.setContent(props?.template ?? ``, ...(props?.states ?? []));
 	}
 
-	get elementRef(): HTMLElement {
+	get elementRef(): T {
 		return this.element;
 	}
 
@@ -76,9 +76,16 @@ export class Component implements HTMLActions  {
 				}
 			});
 			this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+			this.postRender();
 		} else {
 			console.warn("Element is not defined, cannot render component.");
 		}
+	}
+
+
+	// This method is called after the component has been rendered
+	protected postRender(): void {
+
 	}
 
 
