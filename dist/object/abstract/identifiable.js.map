@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/object/abstract/identifiable.ts"],
-  "sourcesContent": ["export class Identifiable {\n\tuuid = \"\";\n\tid = \"\";\n\tname = \"\";\n\n\tconstructor(id: string, name: string) {\n\t\tthis.uuid = Identifiable.generateUUID();\n\t\tthis.id = id;\n\t\tthis.name = name;\n\t}\n\n\tstatic generateUUID() {\n\t\tconst uuid = \"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx\".replace(/[xy]/g, function(c) {\n\t\t\treturn (c === \"x\" ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0) & 0x3 | 0x8).toString(16);\n\t\t});\n\t\treturn uuid;\n\t}\n\n\tcompare(other: Identifiable) {\n\t\treturn this.id === other.id;\n\t}\n\n\tcompareUUID(other: Identifiable) {\n\t\treturn this.uuid === other.uuid;\n\t}\n\n}\n"],
-  "mappings": ";;;AAAO,MAAM,eAAN,MAAM,cAAa;AAAA,IAKzB,YAAY,IAAY,MAAc;AAJtC,kBAAO;AACP,gBAAK;AACL,kBAAO;AAGN,WAAK,OAAO,cAAa,aAAa;AACtC,WAAK,KAAK;AACV,WAAK,OAAO;AAAA,IACb;AAAA,IAEA,OAAO,eAAe;AACrB,YAAM,OAAO,uCAAuC,QAAQ,SAAS,SAAS,GAAG;AAChF,gBAAQ,MAAM,MAAO,KAAK,OAAO,IAAI,KAAK,KAAM,KAAK,OAAO,IAAI,KAAK,KAAK,IAAM,GAAK,SAAS,EAAE;AAAA,MACjG,CAAC;AACD,aAAO;AAAA,IACR;AAAA,IAEA,QAAQ,OAAqB;AAC5B,aAAO,KAAK,OAAO,MAAM;AAAA,IAC1B;AAAA,IAEA,YAAY,OAAqB;AAChC,aAAO,KAAK,SAAS,MAAM;AAAA,IAC5B;AAAA,EAED;",
-  "names": []
-}
