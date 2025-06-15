@@ -9,6 +9,7 @@ import { Browser } from "./interfaces/browser";
 import { createState, FxState } from "framework/state/state";
 import { ToggleComponent } from "framework/components/ToggleComponent";
 import { SyncPage } from "framework/components/SyncPage";
+import { log } from "util/log/log";
 //check if page is still loading
 
 class ChannelCache {
@@ -28,9 +29,11 @@ class ChannelCache {
 		if (channel instanceof Channel) {
 			const _channel = this.doesChannelExist(channel);
 			if (!this.doesChannelExist(channel)) {
+				channel.inject();
 				this.channels.push(channel);
 				return channel;
 			} else {
+				channel.cleanUp();
 				return _channel;
 			}
 		}
@@ -391,6 +394,10 @@ export class ChromeExtension {
 				for (let z = 0; z < videos.length; z++) {
 					const video_dom = videos[z] as HTMLElement;
 					const videof_obj = VideoFactory.createVideo(video_dom);
+					if (!videof_obj) {
+						log.info("[inject] No video found in container %s", containers[i]);
+						continue;
+					}
 					const _channel = this.channels.addChannel(
 						new Channel(
 							videof_obj.channelname.name,

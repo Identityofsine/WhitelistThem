@@ -1,6 +1,9 @@
 import { Dispatch } from "interfaces/dispatch";
 import { Identifiable } from "object/abstract/identifiable";
 import { Computed } from "./computed";
+import { log } from "util/log/log";
+import { Disposable } from "interfaces/disposable";
+
 
 export type Signal<ObjectType> = FxState<ObjectType> | Computed<ObjectType>;
 export type LinkedSignal<ObjectType> = FxState<ObjectType>;
@@ -11,7 +14,7 @@ export type FxState<ObjectType> = {
 	(): ObjectType | undefined;
 	set: (newState: ObjectType) => void;
 	effect: Effect<ObjectType>;
-};
+} & Disposable;
 
 // global tracking for all signals
 let currentTrackingIndex: Set<Signal<any>> | null = null;
@@ -38,7 +41,7 @@ export function stopTracking(fn: (signal: Signal<any>) => void): void {
 	currentTrackingIndex = null;
 }
 
-export class State<ObjectType> {
+export class State<ObjectType> implements Disposable {
 
 	private state: ObjectType | undefined;
 	private readonly _events: Map<Identifiable, (obj?: ObjectType) => void> = new Map();
@@ -79,6 +82,13 @@ export class State<ObjectType> {
 		return this.deleteEvent.bind(this, id);
 	}
 
+	cleanUp(): void {
+		delete this.state;
+		this._events.forEach((_, id) => {
+			this._events.delete(id);
+		});
+	}
+
 }
 
 export function createState<ObjectType>(initialState: ObjectType): FxState<ObjectType> {
@@ -91,6 +101,8 @@ export function createState<ObjectType>(initialState: ObjectType): FxState<Objec
 	};
 
 	fxState.effect = statePrototype.effect.bind(statePrototype) as Effect<ObjectType>;
+
+	fxState.cleanUp = statePrototype.cleanUp.bind(statePrototype) as () => void;
 
 	return fxState;
 }

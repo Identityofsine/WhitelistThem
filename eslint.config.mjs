@@ -19,6 +19,7 @@ export default [
 				...globals.browser,
 				"chrome": "readonly",
 				"browser": "readonly",
+				"__LOGLEVEL__": "readonly",
 			}
 		},
 		plugins: {

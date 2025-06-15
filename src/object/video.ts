@@ -2,9 +2,9 @@ import { FxState } from "framework/state/state";
 import { ChromeExtension } from "..";
 import { Identifiable } from "./abstract/identifiable";
 import { ToggleComponent } from "framework/components/ToggleComponent";
-import { MessageHandler } from "handler/messagehandler";
+import { Disposable } from "interfaces/disposable";
 
-export class Video extends Identifiable {
+export class Video extends Identifiable implements Disposable {
 	isShort = false;
 	dom: HTMLElement | null = null;
 	disabled: FxState<boolean> | null = null;
@@ -63,5 +63,15 @@ export class Video extends Identifiable {
 
 		this.dom.appendChild(element.elementRef);
 		this.dom.dataset.whitelisted = "true";
+	}
+
+	cleanUp() {
+		if (this.dom && this.dom.dataset.whitelisted) {
+			this.dom.removeChild(this.dom.querySelector("#whitelist-spot")!);
+			this.dom.dataset.whitelisted = "";
+		}
+		this.injected = false;
+		this.disabled = null;
+		this.dom = null;
 	}
 }

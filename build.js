@@ -10,6 +10,8 @@ const args = process.argv.slice(2);
 const isWatch = args.includes('--watch');
 const targetArg = args.find(arg => arg.startsWith('--target='));
 const target = targetArg ? targetArg.split('=')[1] : 'chrome';
+const isDebug = args.includes('--debug');
+const loglevel = isDebug ? 'debug' : 'info';
 
 const entryPoints = {
 	background: 'src/background.js',
@@ -57,6 +59,9 @@ function build() {
 		platform: 'browser',
 		target: ['chrome58', 'firefox57'],
 		sourcemap: true,
+		define: {
+			__LOGLEVEL__: JSON.stringify(loglevel), // Set log level
+		},
 		plugins: [sassPlugin()],
 	});
 }
