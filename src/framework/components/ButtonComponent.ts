@@ -35,12 +35,16 @@ export class ButtonComponent extends Component<HTMLButtonElement> {
 		this.setContent(TEMPLATE, this.classSignal, this.labelSignal);
 	}
 
-	protected override postRender(): void {
+	protected override initializeElement(): void {
 		this.elementRef.addEventListener("click", (event: MouseEvent) => {
 			if (this._props.onClick) {
 				this._props.onClick(event);
 			}
 		});
+		super.initializeElement();
+	}
+
+	protected override postRender(): void {
 		super.postRender();
 	}
 }

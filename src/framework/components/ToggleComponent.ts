@@ -1,10 +1,10 @@
 import { Component } from "framework/element/component";
 import { FxState } from "framework/state/state";
 
-const TEMPLATE = 
-`<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
+const TEMPLATE =
+	`<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
 	<h2>{0 ? Enabled : Disabled}</h2>
-</div>` 
+</div>`
 
 
 type ToggleProps = {
@@ -16,13 +16,14 @@ type ToggleProps = {
 
 export class ToggleComponent extends Component {
 
-	constructor({tag, template, state, onClick}: ToggleProps) {
+	constructor({ tag, template, state, onClick }: ToggleProps) {
 		super({
 			tag: tag ?? "toggle-component",
 			template: template ?? TEMPLATE,
 			states: [state],
+			alwaysRender: true,
 		});
 		onClick && this.onClick(onClick)
 	}
-	
+
 }

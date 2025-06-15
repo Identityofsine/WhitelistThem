@@ -1,5 +1,6 @@
 import { Component } from "framework/element/component";
 import { createState, FxState, Signal } from "framework/state/state";
+import { log } from "util/log/log";
 
 
 type InputComponentProps = {
@@ -17,6 +18,7 @@ export class InputComponent extends Component<HTMLInputElement> {
 		super({
 			element: element,
 			tag: "input",
+			alwaysRender: true,
 		})
 		this.localState = valueState;
 		this.setContent(``, this.localState);
@@ -40,7 +42,7 @@ export class InputComponent extends Component<HTMLInputElement> {
 
 		this.onFocus(() => {
 			if (this.wasFocused) {
-				console.log("InputComponent regained focus, restoring last position:", this.lastPosition);
+				log.debug("InputComponent regained focus, restoring last position:", this.lastPosition);
 				this.lastPosition += 1;
 			} else {
 				this.wasFocused = true;
@@ -49,9 +51,11 @@ export class InputComponent extends Component<HTMLInputElement> {
 		})
 
 		this.onBlur(() => {
-			console.log("InputComponent lost focus, last position:", this.lastPosition);
+			log.debug("InputComponent lost focus, last position:", this.lastPosition);
 			this.wasFocused = false;
 		});
+
+		super.initializeElement();
 	}
 
 	protected override postRender(): void {
@@ -59,7 +63,7 @@ export class InputComponent extends Component<HTMLInputElement> {
 		if (this.wasFocused) {
 			this.elementRef.focus();
 			this.elementRef.setSelectionRange(this.lastPosition, this.lastPosition);
-			console.log("Restoring focus and selection range to", this.lastPosition);
+			log.debug("Restoring focus and selection range to:", this.lastPosition);
 		}
 
 		this.elementRef.value = this.localState?.() ?? "";

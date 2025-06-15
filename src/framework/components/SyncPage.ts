@@ -4,14 +4,16 @@ import { InputComponent } from "./InputComponent";
 import { Serializer } from "index";
 import { ButtonComponent } from "./ButtonComponent";
 import { computed, linkedSignal } from "framework/state/computed";
+import '../../styles/syncpage.scss';
 
 const TEMPLATE =
 	`
 <div id="wt-serializer">
-	<h2>Export/Import</h2>
-	<div id="toggle-page" class="sync-page {0 ? open : close}">
+  <sync-toggle></sync-toggle>
+	<div id="toggle-page" class="sync-page {0 ? open : close} {1 ? already-rendered : not-rendered}">
 		<div class="tag flex column wrap">
 			<h2 class="tag text-center">Channel Serializer</h2>
+			<channel-list-length-text></channel-list-length-text>
 			<input-box class="fill-width">
 			</input-box>
 			<error-text></error-text>
@@ -45,8 +47,12 @@ export class SyncPage extends Component {
 	private readonly clipboardButtonName: Signal<string> = computed(() => "Copy Channel List to Clipboard");
 	private readonly clearButtonName: Signal<string> = computed(() => "Clear Channel List");
 	private readonly errorMessage: FxState<string> = createState("");
+
+	//components
+	private channelListLengthText?: Component<HTMLHeadingElement>;
 	private inputComponent?: InputComponent;
 	private errorComponent?: Component<HTMLSpanElement>;
+	private syncPageToggleButton?: ButtonComponent;
 	private clipboardButton?: ButtonComponent;
 	private clearButton?: ButtonComponent;
 
@@ -84,21 +90,46 @@ export class SyncPage extends Component {
 			}
 		});
 
-		super.setContent(TEMPLATE, this.open, this.channelListLength);
+		super.setContent(TEMPLATE, this.open, this.alreadyRendered);
 
-		super.onClick(() => {
-			this.open.set(!this.open());
-		});
 	}
 
 	protected override postRender(): void {
 
+		const syncToggle = this.elementRef.querySelector("sync-toggle");
+		if (syncToggle) {
+			if (!this.syncPageToggleButton) {
+				this.syncPageToggleButton = new ButtonComponent({
+					classSignal: computed(() => ""),
+					labelSignal: computed(() => "Channel List"),
+					onClick: () => {
+						console.debug("SyncPage Toggle Clicked, current state:", this.open());
+						this.open.set(!this.open());
+					}
+				});
+			}
+			syncToggle.appendChild(this.syncPageToggleButton.elementRef);
+		}
+
 		// Toggle Page
-		const togglePage = this.elementRef.querySelector("#toggle-page");
+		const togglePage = this.elementRef.querySelector("sync-toggle");
 		if (togglePage) {
 			togglePage.addEventListener("click", (e) => {
 				e.stopPropagation();
 			});
+		}
+
+		const channelListLength = this.elementRef.querySelector("channel-list-length-text");
+		if (channelListLength) {
+			//if the channelListLengthText component does not exist, create it
+			if (!this.channelListLengthText) {
+				this.channelListLengthText = new Component<HTMLHeadingElement>({
+					tag: "h3",
+					template: `<h3 class="tag text-center">{0}</h3>`,
+					states: [this.channelListLength]
+				});
+			}
+			channelListLength.appendChild(this.channelListLengthText.elementRef);
 		}
 
 		//input box

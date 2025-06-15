@@ -1,5 +1,5 @@
 import { Computed } from "framework/state/computed";
-import { FxState, Signal } from "framework/state/state";
+import { createState, FxState, Signal } from "framework/state/state";
 import { HTMLActions } from "interfaces/component";
 import { Dispatch } from "interfaces/dispatch";
 import { Identifiable } from "object/abstract/identifiable";
@@ -15,6 +15,7 @@ export type ComponentProps<T extends HTMLElement = HTMLElement> = {
 	tag?: string;
 	template?: string;
 	states?: Signal<any>[];
+	alwaysRender?: boolean;
 	element?: T;
 }
 
@@ -25,6 +26,8 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	private htmlTemplate: string = ``;
 	protected _states: Signal<any>[] = [];
 	private _events$: Dispatch<void, void>[] = [];
+
+	protected readonly alreadyRendered = createState(false);
 
 	constructor(props?: ComponentProps<T>) {
 		const tag = props?.tag ?? 'component';
@@ -77,8 +80,11 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 					item.updateValue(``);
 				}
 			});
-			this.element.innerHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+			const newHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+
+			this.element.innerHTML = newHTML;
 			this.postRender();
+
 		} else {
 			console.warn("Element is not defined, cannot render component.");
 		}
@@ -101,6 +107,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	}
 
 	protected initializeElement(): void {
+		this.alreadyRendered.set(true);
 	}
 
 
