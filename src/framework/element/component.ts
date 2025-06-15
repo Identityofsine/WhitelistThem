@@ -1,4 +1,5 @@
-import { FxState } from "framework/state/state";
+import { Computed } from "framework/state/computed";
+import { FxState, Signal } from "framework/state/state";
 import { HTMLActions } from "interfaces/component";
 import { Dispatch } from "interfaces/dispatch";
 import { Identifiable } from "object/abstract/identifiable";
@@ -13,15 +14,15 @@ const REGEX_STATE = /\s*(\d+)/
 export type ComponentProps<T extends HTMLElement = HTMLElement> = {
 	tag?: string;
 	template?: string;
-	states?: FxState<any>[];
+	states?: Signal<any>[];
 	element?: T;
 }
 
-export class Component<T extends HTMLElement = HTMLElement> implements HTMLActions  {
+export class Component<T extends HTMLElement = HTMLElement> implements HTMLActions {
 
 	private element: T;
-	private htmlTemplate: string = ``; 
-	protected _states: FxState<any>[] = [];
+	private htmlTemplate: string = ``;
+	protected _states: Signal<any>[] = [];
 	private _events$: Dispatch<void, void>[] = [];
 
 	constructor(props?: ComponentProps<T>) {
@@ -37,7 +38,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	/**
 		* html template should be set like the java log4j2 template: <div>{}</div>
 		*/
-  setContent(html: string, ...args: FxState<any>[]) {
+	setContent(html: string, ...args: Signal<any>[]) {
 		this.onDestroy();
 		if (args.length > 0) {
 			this._states = args;
@@ -46,9 +47,9 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 				this._events$.push(event);
 			});
 		}
-		this.htmlTemplate = html.replace(/[\n\r\t]/g, ``).trim();	
+		this.htmlTemplate = html.replace(/[\n\r\t]/g, ``).trim();
 		this.render();
-	}	
+	}
 
 	onDestroy() {
 		this._events$.forEach((event) => event());
@@ -58,7 +59,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	private render() {
 		// Render the component's HTML template
 		// This is a placeholder for actual rendering logic
-	  if (this.element) {
+		if (this.element) {
 			const htmlTemplateCount = (this.htmlTemplate.match(/{}/g) || []).length;
 			if (htmlTemplateCount !== this._states.length) {
 				//console.error(new Error("[Component] Mismatch between number of placeholders and states provided."));
@@ -70,7 +71,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 					const stateContent = this._states[stateIndex]();
 					if (stateContent !== undefined) {
 						item.updateValue(stateContent);
-					} 				
+					}
 				} else {
 					item.updateValue(``);
 				}
@@ -127,8 +128,8 @@ class TemplateParsed {
 	//-1 = no state
 	readonly stateIndex: number = -1;
 	readonly offset: number = 0;
-	private content: string = ``; 
-	private length: number = 0 ;
+	private content: string = ``;
+	private length: number = 0;
 	readonly originalLength: number = 0;
 	readonly source: string = ``;
 
@@ -184,7 +185,7 @@ class TemplateParsed {
 
 class TemplateParser {
 
-	static parse(template: string): TemplateParsed[] { 
+	static parse(template: string): TemplateParsed[] {
 		const parsed: TemplateParsed[] = [];
 
 		// state index is in the first number of the template, e.g. {0} or {1}

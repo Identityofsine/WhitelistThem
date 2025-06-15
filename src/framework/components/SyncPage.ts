@@ -2,9 +2,11 @@ import { Component } from "framework/element/component";
 import { createState, FxState } from "framework/state/state";
 import { InputComponent } from "./InputComponent";
 import { Serializer } from "index";
+import { ButtonComponent } from "./ButtonComponent";
+import { computed } from "framework/state/computed";
 
-const TEMPLATE = 
-`
+const TEMPLATE =
+	`
 <div id="wt-serializer">
 	<h2>Export/Import</h2>
 	<div id="toggle-page" class="sync-page {0 ? open : close}">
@@ -15,6 +17,12 @@ const TEMPLATE =
 			<span class="tag error">{2}</span>
 			<div class="flex column wrap gap-01"> 
 			</div>
+			<div class="tag flex gap-01 flex-half align-center justify-center">
+				<clipboard-button>
+				</clipboard-button>
+				<clear-button>
+				</clear-button>
+			</div>
 		</div>
 	</div>
 </div>
@@ -22,20 +30,24 @@ const TEMPLATE =
 
 type SyncPageProps = {
 	states: {
-	  channelList: FxState<string[]>	
+		channelList: FxState<string[]>
 	}
 }
 
 export class SyncPage extends Component {
 
-  private open: FxState<boolean> = createState(false); 
+	private open: FxState<boolean> = createState(false);
 	private readonly channelList: FxState<string[]>;
 	private readonly channelListJSON: FxState<string>;
-  private readonly channelListLength: FxState<number>
-	private readonly errorMessage: FxState<string> = createState("");	
+	private readonly channelListLength: FxState<number>
+	private readonly clipboardButtonName: FxState<string> = computed(() => "Copy to Clipboard");
+	private readonly clearButtonName: FxState<string> = computed(() => "Clear Channel List");
+	private readonly errorMessage: FxState<string> = createState("");
 	private inputComponent?: InputComponent;
+	private clipboardButton?: ButtonComponent;
+	private clearButton?: ButtonComponent;
 
-	constructor({states}: SyncPageProps) {
+	constructor({ states }: SyncPageProps) {
 		super({
 			tag: "sync-page",
 		});
@@ -81,7 +93,7 @@ export class SyncPage extends Component {
 				e.stopPropagation();
 			});
 		}
-		const inputBox = this.elementRef.querySelector("input-box"); 
+		const inputBox = this.elementRef.querySelector("input-box");
 		if (inputBox) {
 			if (!this.inputComponent) {
 				this.inputComponent = new InputComponent({
@@ -89,6 +101,32 @@ export class SyncPage extends Component {
 				})
 			}
 			inputBox.appendChild(this.inputComponent.elementRef);
+		}
+
+		const clipboardButton = this.elementRef.querySelector("clipboard-button");
+		if (clipboardButton) {
+			if (!this.clipboardButton) {
+				this.clipboardButton = new ButtonComponent({
+					labelSignal: this.clipboardButtonName,
+					onClick: () => {
+						navigator.clipboard.writeText(this.channelListJSON() ?? `[]`);
+					}
+				});
+			}
+			clipboardButton.appendChild(this.clipboardButton.elementRef);
+
+		}
+		const clearButton = this.elementRef.querySelector("clear-button");
+		if (clearButton) {
+			if (!this.clearButton) {
+				this.clearButton = new ButtonComponent({
+					labelSignal: this.clearButtonName,
+					onClick: () => {
+						this.channelList.set([]);
+					}
+				});
+			}
+			clearButton.appendChild(this.clearButton.elementRef);
 		}
 
 		super.postRender();
