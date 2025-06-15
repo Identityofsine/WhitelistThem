@@ -14,6 +14,7 @@ type ButtonComponentProps = {
 	onClick?: (event: MouseEvent) => void;
 };
 
+
 export class ButtonComponent extends Component<HTMLButtonElement> {
 
 	readonly classSignal: Signal<string>;
@@ -28,8 +29,8 @@ export class ButtonComponent extends Component<HTMLButtonElement> {
 			states: [],
 		})
 		this._props = props;
-		this.classSignal = computed<string>(props.classSignal ?? (() => ""));
-		this.labelSignal = computed<string>(props.labelSignal ?? (() => "Button"));
+		this.classSignal = computed<string>(() => props.classSignal?.() ?? "");
+		this.labelSignal = computed<string>(() => props.labelSignal?.() ?? "Button");
 
 		this.setContent(TEMPLATE, this.classSignal, this.labelSignal);
 	}

@@ -3,6 +3,7 @@ import { Identifiable } from "object/abstract/identifiable";
 import { Computed } from "./computed";
 
 export type Signal<ObjectType> = FxState<ObjectType> | Computed<ObjectType>;
+export type LinkedSignal<ObjectType> = FxState<ObjectType>;
 
 type Effect<ObjectType> = Dispatch<Dispatch<ObjectType, void>, Dispatch<void, void>>;
 
@@ -13,17 +14,27 @@ export type FxState<ObjectType> = {
 };
 
 // global tracking for all signals
-let currentTrackingIndex: Set<FxState<any>> | null = null;
+let currentTrackingIndex: Set<Signal<any>> | null = null;
 
-export function startTracking(fn: (signal: FxState<any>) => void): void {
+export function startTracking(): void {
+	if (currentTrackingIndex) {
+		console.warn("Tracking is already started. This will cause a merge of tracking indices.");
+		return;
+	}
 	currentTrackingIndex = new Set();
-	currentTrackingIndex.forEach((signal) => {
-		fn(signal);
-	});
 }
 
-export function stopTracking(): void {
+export function stopTracking(fn: (signal: Signal<any>) => void): void {
 	if (!currentTrackingIndex) return;
+	for (const signal of currentTrackingIndex) {
+		if (signal.effect) {
+			signal.effect(() => {
+				fn(signal);
+			});
+		} else {
+			fn(signal);
+		}
+	}
 	currentTrackingIndex = null;
 }
 
@@ -37,6 +48,10 @@ export class State<ObjectType> {
 	}
 
 	stateValue(): ObjectType | undefined {
+		//add to itself
+		if (currentTrackingIndex) {
+			currentTrackingIndex.add(this as Signal<ObjectType>);
+		}
 		return this.state;
 	}
 
@@ -76,13 +91,6 @@ export function createState<ObjectType>(initialState: ObjectType): FxState<Objec
 	};
 
 	fxState.effect = statePrototype.effect.bind(statePrototype) as Effect<ObjectType>;
-
-	//add to itself
-	fxState.effect(() => {
-		if (currentTrackingIndex) {
-			currentTrackingIndex.add(fxState);
-		}
-	})
 
 	return fxState;
 }

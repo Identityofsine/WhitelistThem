@@ -21,6 +21,7 @@ export type ComponentProps<T extends HTMLElement = HTMLElement> = {
 export class Component<T extends HTMLElement = HTMLElement> implements HTMLActions {
 
 	private element: T;
+	private initalizedElement: boolean = false;
 	private htmlTemplate: string = ``;
 	protected _states: Signal<any>[] = [];
 	private _events$: Dispatch<void, void>[] = [];
@@ -86,7 +87,20 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 
 	// This method is called after the component has been rendered
 	protected postRender(): void {
+		if (!this.initalizedElement) {
+			this.initializeElement();
+			this.initalizedElement = true;
+		}
+		if (this.element) {
+			this.element.id = this.element.id || Identifiable.generateUUID();
+			this.element.classList.add(this.constructor.name.toLowerCase());
+		} else {
+			console.warn("Element is not defined, cannot post render component.");
+		}
 
+	}
+
+	protected initializeElement(): void {
 	}
 
 
@@ -117,6 +131,26 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 			});
 		} else {
 			console.warn("Element is not defined, cannot attach mouseout listener.");
+		}
+	}
+
+	onFocus(listener: Dispatch<Partial<FocusEvent>>): void {
+		if (this.element) {
+			this.element.addEventListener("focus", (event: FocusEvent) => {
+				listener(event);
+			});
+		} else {
+			console.warn("Element is not defined, cannot attach focus listener.");
+		}
+	}
+
+	onBlur(listener: Dispatch<Partial<FocusEvent>>): void {
+		if (this.element) {
+			this.element.addEventListener("blur", (event: FocusEvent) => {
+				listener(event);
+			});
+		} else {
+			console.warn("Element is not defined, cannot attach blur listener.");
 		}
 	}
 

@@ -1,9 +1,9 @@
 import { Component } from "framework/element/component";
-import { createState, FxState } from "framework/state/state";
+import { createState, FxState, Signal } from "framework/state/state";
 import { InputComponent } from "./InputComponent";
 import { Serializer } from "index";
 import { ButtonComponent } from "./ButtonComponent";
-import { computed } from "framework/state/computed";
+import { computed, linkedSignal } from "framework/state/computed";
 
 const TEMPLATE =
 	`
@@ -11,13 +11,13 @@ const TEMPLATE =
 	<h2>Export/Import</h2>
 	<div id="toggle-page" class="sync-page {0 ? open : close}">
 		<div class="tag flex column wrap">
-			<h2 class="tag">Channel Serializer: {1} Channel(s)</h2>
+			<h2 class="tag text-center">Channel Serializer</h2>
 			<input-box class="fill-width">
 			</input-box>
-			<span class="tag error">{2}</span>
+			<error-text></error-text>
 			<div class="flex column wrap gap-01"> 
 			</div>
-			<div class="tag flex gap-01 flex-half align-center justify-center">
+			<div class="tag flex mt-12 column gap-04 flex-half align-center justify-center">
 				<clipboard-button>
 				</clipboard-button>
 				<clear-button>
@@ -37,13 +37,16 @@ type SyncPageProps = {
 export class SyncPage extends Component {
 
 	private open: FxState<boolean> = createState(false);
+
 	private readonly channelList: FxState<string[]>;
 	private readonly channelListJSON: FxState<string>;
-	private readonly channelListLength: FxState<number>
-	private readonly clipboardButtonName: FxState<string> = computed(() => "Copy to Clipboard");
-	private readonly clearButtonName: FxState<string> = computed(() => "Clear Channel List");
+	private readonly channelListLength: Signal<number>
+
+	private readonly clipboardButtonName: Signal<string> = computed(() => "Copy Channel List to Clipboard");
+	private readonly clearButtonName: Signal<string> = computed(() => "Clear Channel List");
 	private readonly errorMessage: FxState<string> = createState("");
 	private inputComponent?: InputComponent;
+	private errorComponent?: Component<HTMLSpanElement>;
 	private clipboardButton?: ButtonComponent;
 	private clearButton?: ButtonComponent;
 
@@ -53,20 +56,22 @@ export class SyncPage extends Component {
 		});
 
 		this.channelList = states.channelList;
-		this.channelListLength = createState(this.channelList()?.length ?? 0);
-		this.channelListJSON = createState(JSON.stringify(this.channelList()) ?? "");
-
-		this.channelList.effect((list) => {
-			this.channelListLength.set(list.length);
-			const json = Serializer.exportChannels(list);
-			this.channelListJSON.set(json ?? "[]");
-		});
+		this.channelListJSON = linkedSignal(() => JSON.stringify(this.channelList() ?? [], null, 2));
+		this.channelListLength = computed(() => this.channelList()?.length ?? 0);
 
 		this.channelListJSON.effect((json) => {
 			try {
 				const object = Serializer.importChannels(json);
 				if (Array.isArray(object)) {
-					this.channelList.set([...object]);
+
+					const existingChannels = this.channelList();
+					const diff = object.filter(channel => !(existingChannels ?? []).includes(channel));
+					if (diff.length <= 0) {
+						this.errorMessage.set("");
+						return;
+					}
+
+					this.channelList.set(object);
 					this.errorMessage.set("");
 				} else {
 					this.errorMessage.set("Invalid JSON format for channel list (Must be an Array). This will not be saved.");
@@ -79,7 +84,7 @@ export class SyncPage extends Component {
 			}
 		});
 
-		super.setContent(TEMPLATE, this.open, this.channelListLength, this.errorMessage);
+		super.setContent(TEMPLATE, this.open, this.channelListLength);
 
 		super.onClick(() => {
 			this.open.set(!this.open());
@@ -87,12 +92,16 @@ export class SyncPage extends Component {
 	}
 
 	protected override postRender(): void {
+
+		// Toggle Page
 		const togglePage = this.elementRef.querySelector("#toggle-page");
 		if (togglePage) {
 			togglePage.addEventListener("click", (e) => {
 				e.stopPropagation();
 			});
 		}
+
+		//input box
 		const inputBox = this.elementRef.querySelector("input-box");
 		if (inputBox) {
 			if (!this.inputComponent) {
@@ -103,10 +112,24 @@ export class SyncPage extends Component {
 			inputBox.appendChild(this.inputComponent.elementRef);
 		}
 
+		const errorText = this.elementRef.querySelector("error-text");
+		if (errorText) {
+			if (!this.errorComponent) {
+				//avoids re-rendering the error component if it already exists
+				this.errorComponent = new Component<HTMLSpanElement>({
+					tag: "span",
+					template: `<span class="tag error">{0}</span>`,
+					states: [this.errorMessage]
+				});
+			}
+			errorText.appendChild(this.errorComponent.elementRef);
+		}
+
 		const clipboardButton = this.elementRef.querySelector("clipboard-button");
 		if (clipboardButton) {
 			if (!this.clipboardButton) {
 				this.clipboardButton = new ButtonComponent({
+					classSignal: computed(() => "primary"),
 					labelSignal: this.clipboardButtonName,
 					onClick: () => {
 						navigator.clipboard.writeText(this.channelListJSON() ?? `[]`);
@@ -120,6 +143,7 @@ export class SyncPage extends Component {
 		if (clearButton) {
 			if (!this.clearButton) {
 				this.clearButton = new ButtonComponent({
+					classSignal: computed(() => "danger"),
 					labelSignal: this.clearButtonName,
 					onClick: () => {
 						this.channelList.set([]);
