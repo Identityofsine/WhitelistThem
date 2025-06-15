@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/util/sleep.ts"],
-  "sourcesContent": ["import { Dispatch } from \"../framework/tagger\";\n\nexport async function sleep(callback: Dispatch, timeout: number) {\n\treturn new Promise((resolve, _reject) => {\n\t\tsetTimeout(() => {\n\t\t\tresolve(callback());\n\t\t}, timeout);\n\t});\n}\n"],
-  "mappings": ";;;AAEA,iBAAsB,MAAM,UAAoB,SAAiB;AAChE,WAAO,IAAI,QAAQ,CAAC,SAAS,YAAY;AACxC,iBAAW,MAAM;AAChB,gBAAQ,SAAS,CAAC;AAAA,MACnB,GAAG,OAAO;AAAA,IACX,CAAC;AAAA,EACF;",
-  "names": []
-}

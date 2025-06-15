@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/styles.scss"],
-  "sourcesContent": ["#whitelist-spot {\n\tposition: absolute;\n\ttop: -2em;\n\tleft: 1em;\n\tz-index: 2;\n\twidth: fit-content;\n\theight: fit-content;\n\tpadding: .5em;\n\n\th2 {\n\t\t/* check color scheme */\n\t\tcolor: #fff;\n\t\tfont-size: 5em;\n\t\tfont-weight: bold;\n\t\tuser-select: none;\n\t\tpointer-events: all;\n\t\tcursor: crosshair;\n\t\t/* text-stroke */\n\t\t-webkit-text-stroke: .05em #000;\n\t}\n}\n\n\n\n#wt-toggle,\n#wt-serializer {\n\tbackground: #fff;\n\tpadding: .5em;\n\tcursor: pointer;\n\ttransition: .5s opacity;\n\tmargin-right: .5em;\n\tposition: relative;\n}\n\n#wt-toggle {\n\topacity: .5;\n\n\t&.on {\n\t\topacity: 1;\n\t}\n}\n\n#wt-add {\n\tmargin-left: .25em;\n\tfont-size: 1.5em;\n\tbackground: #fff;\n\tpadding: .25em;\n\tborder: 2px solid #000;\n\tborder-radius: 5px;\n}\n"],
-  "mappings": ";AAAA,CAAA;AACC,YAAA;AACA,OAAA;AACA,QAAA;AACA,WAAA;AACA,SAAA;AACA,UAAA;AACA,WAAA;;AAEA,CATD,eASC;AAEC,SAAA;AACA,aAAA;AACA,eAAA;AACA,oBAAA;AAAA,eAAA;AACA,kBAAA;AACA,UAAA;AAEA,uBAAA,OAAA;;AAMF,CAAA;AAAA,CAAA;AAEC,cAAA;AACA,WAAA;AACA,UAAA;AACA,cAAA,KAAA;AACA,gBAAA;AACA,YAAA;;AAGD,CAVA;AAWC,WAAA;;AAEA,CAbD,SAaC,CAAA;AACC,WAAA;;AAIF,CAAA;AACC,eAAA;AACA,aAAA;AACA,cAAA;AACA,WAAA;AACA,UAAA,IAAA,MAAA;AACA,iBAAA;;",
-  "names": []
-}

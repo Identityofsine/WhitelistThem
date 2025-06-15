@@ -1,36 +1,29 @@
-import { tdiv } from "framework/tagger";
+import { FxState } from "framework/state/state";
 import { ChromeExtension } from "..";
-import { MessageHandler } from "../handler/messagehandler";
 import { Identifiable } from "./abstract/identifiable";
-import { Channel } from "./channel";
+import { ToggleComponent } from "framework/components/ToggleComponent";
+import { Disposable } from "interfaces/disposable";
 
-export class Video extends Identifiable {
+export class Video extends Identifiable implements Disposable {
 	isShort = false;
 	dom: HTMLElement | null = null;
-	disabled = false;
+	disabled: FxState<boolean> | null = null;
 	injected = false;
 
 	constructor(id: string, name: string, isShort: boolean, dom: HTMLElement) {
 		super(id, name);
 		this.isShort = isShort;
 		this.dom = dom;
-	}
-
-	changeInjectionState(plus: boolean) {
-		if (!this.dom) return;
-		const element = this.dom.querySelector("#whitelist-spot");
-		if (!element) return;
-		if (plus) {
-			element.innerHTML = `<h2>+</h2>`;
-		} else {
-			element.innerHTML = `<h2>-</h2>`;
-		}
+		ChromeExtension.enabled.effect(() => {
+			this.refresh();
+		});
 	}
 
 	refresh() {
 		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
-			if (this.disabled) {
+		if (!this.disabled) return;
+		if (ChromeExtension.enabled()) {
+			if (this.disabled()) {
 				this.dom.style.display = "none";
 			} else {
 				this.dom.style.display = "block";
@@ -38,69 +31,47 @@ export class Video extends Identifiable {
 		} else {
 			this.dom.style.display = "block";
 		}
-		this.changeInjectionState(this.disabled);
-	}
-
-	disable() {
-		if (this.disabled) return;
-		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
-			this.dom.style.display = "none";
-		}
-
-		this.changeInjectionState(true);
-		this.disabled = true;
-	}
-
-	enable() {
-		if (!this.dom) return;
-		if (ChromeExtension.enabled) {
-			this.dom.style.display = "block";
-		}
-		this.changeInjectionState(false);
-		this.disabled = false;
 	}
 
 	/**
-	 * @param {Channel} channel
 	 */
-	inject(channel: Channel) {
+	inject(disabled: FxState<boolean>) {
 		if (!this.dom) return;
 		if (this.dom.dataset.whitelisted) {
 			this.injected = true;
 			return;
 		}
 
-		const element = tdiv();
+		this.disabled = disabled;
+		const element = new ToggleComponent({
+			tag: "video-toggle-component",
+			template: `
+			<div id="whitelist-spot" class="">
+				<h2>{0 ? + : -}</h2>
+			</div>
+			`,
+			state: disabled,
+			onClick: () => {
+				const state = disabled();
+				disabled.set(!state);
+			},
+		});
 
-		if (!this.disabled)
-			element.innerHTML = `<h2>-</h2>`;
-		else
-			element.innerHTML = `<h2>+</h2>`
+		disabled.effect(() => {
+			this.refresh();
+		});
 
-		element.id = "whitelist-spot";
-
-		const onclick_function = () => {
-			if (this.disabled) {
-				MessageHandler.addChannel(channel.name);
-				ChromeExtension.addAllowedChannel(channel.name);
-				this.enable();
-				channel.enable();
-			} else {
-				MessageHandler.removeChannel(channel.name);
-				ChromeExtension.removeAllowedChannel(channel.name);
-				this.disable();
-				channel.disable();
-			}
-		};
-
-		element.onclick = onclick_function.bind(this);
-		//adjust for macbook trackpad
-		element.onmousedown = (_) => {
-			onclick_function();
-		}
-		this.dom.appendChild(element);
-		this.dom.dataset.whitelisted = 'true';
+		this.dom.appendChild(element.elementRef);
+		this.dom.dataset.whitelisted = "true";
 	}
 
+	cleanUp() {
+		if (this.dom && this.dom.dataset.whitelisted) {
+			this.dom.removeChild(this.dom.querySelector("#whitelist-spot")!);
+			this.dom.dataset.whitelisted = "";
+		}
+		this.injected = false;
+		this.disabled = null;
+		this.dom = null;
+	}
 }

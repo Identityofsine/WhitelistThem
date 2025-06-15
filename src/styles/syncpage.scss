@@ -1,0 +1,69 @@
+@use './var.scss' as wls;
+
+.sync-page {
+  position: absolute;
+	min-width: 20rem;
+	min-height: 20rem;
+	padding: 4rem;
+	background-color: wls.$black-200;
+	border-radius: 0.25rem;
+	border: 2px solid wls.$black-400;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4); // subtle and smooth
+	display: none;
+	cursor: default;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  right:0;
+
+
+	//position center;
+	top: 130%;
+
+  &.open {
+    display: block;
+    animation: fadeIn 0.25s ease-out;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  h2 {
+    font-size: 2.2rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: wls.$white-100;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    text-rendering: optimizeLegibility;
+
+    &.text-center {
+      text-align: center;
+    }
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: wls.$white-400;
+    margin-top: -1rem;
+    margin-bottom: 2rem;
+
+    line-height: 1.4;
+    letter-spacing: 0.015em;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    &.text-center {
+      text-align: center;
+    }
+  }
+
+}

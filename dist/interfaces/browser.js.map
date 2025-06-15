@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/interfaces/browser.ts"],
-  "sourcesContent": ["//static table\nexport type ChromeMessage = {\n\ttype: string;\n\tchannel?: string;\n\tchannels?: string[];\n\tenabled?: boolean;\n}\n\nexport class Browser {\n\tpublic static get isFirefox() {\n\t\treturn navigator.userAgent.toLowerCase().indexOf(\"firefox\") > -1;\n\t}\n\tpublic static get browser(): any | undefined {\n\t\t// @ts-ignore\n\t\tif (chrome) {\n\t\t\t// @ts-ignore\n\t\t\treturn chrome;\n\t\t} else {\n\t\t\t// @ts-ignore\n\t\t\treturn browser;\n\t\t}\n\t}\n}\n"],
-  "mappings": ";;;AAQO,MAAM,UAAN,MAAc;AAAA,IACpB,WAAkB,YAAY;AAC7B,aAAO,UAAU,UAAU,YAAY,EAAE,QAAQ,SAAS,IAAI;AAAA,IAC/D;AAAA,IACA,WAAkB,UAA2B;AAE5C,UAAI,QAAQ;AAEX,eAAO;AAAA,MACR,OAAO;AAEN,eAAO;AAAA,MACR;AAAA,IACD;AAAA,EACD;",
-  "names": []
-}

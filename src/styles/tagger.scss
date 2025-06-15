@@ -1,46 +1,85 @@
-.toggle-page {
-	min-width: 20rem;
-	min-height: 30rem;
-	padding: 4rem;
-	background-color: #fff;
-	border-radius: 0.25rem;
-	border: 2px solid #f0f0f0;
-	box-shadow: 0px 14px 64px rgba(68, 61, 46, 0.05);
-	display: none;
-	cursor: default;
+@use './var.scss' as wls;
 
+:root {
+  --tagger-primary-color: #{wls.$blue-500};
+  --tagger-primary-color-hover: #{wls.$blue-600};
+  --tagger-secondary-color: #{wls.$gray-100};
+  --tagger-secondary-color-hover: #{wls.$gray-200};
+  --tagger-secondary-border-color: #{wls.$gray-400};
 
-	//position center;
-	top: 130%;
+  --tagger-danger-color: #{wls.$red-500};
+  --tagger-danger-color-hover: #{wls.$red-600};
 
-	&.open {
-		position: absolute;
-		display: block;
-	}
 
 }
 
+.already-rendered {
+  animation: none !important;
+}
 
 //element styles
 input.tag {
-	padding: 1.2rem 2rem;
-	border: 1px solid #f0f0f0;
-	border-radius: 0.25rem;
-	font-size: 1.6rem;
+  padding: 1rem 1.5rem;
+  border: 1px solid wls.$black-400;
+  border-radius: 0.5rem;
+  background-color: wls.$black-200;
+  color: wls.$white-100;
+  font-size: 1.5rem;
+  font-family: inherit;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); // subtle shadow for depth
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &::placeholder {
+    color: wls.$white-500;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: wls.$blue-500;
+    box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.2); // soft blue focus ring
+    background-color: wls.$black-200;
+  }
 }
 
 button.tag {
 	color: black;
-	background: #101010;
 	border-radius: 4px;
 	padding: 0.8814rem 1.2029rem;
-	border: solid 1.5px #fff;
-	color:white;
-	box-shadow: 0px 14px 64px rgba(5, 5, 5, 0.05);
+	border: solid 1.5px var(--tagger-secondary-border-color);
+  background-color: var(--tagger-secondary-color);
 	user-select: none;
-	font-size: 2.4rem;
-	font-weight: 500;
+	font-size: 1.15rem;
+	font-weight: 400;
 	cursor: pointer;
+
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+
+  &:hover {
+    background-color: var(--tagger-secondary-color-hover);
+    transform: scale(1.02);
+  }
+
+  &.primary {
+    background-color: var(--tagger-primary-color);
+    border: solid 1.5px darken(wls.$blue-500, 2%);
+    box-shadow: 0px 8px 5px 2px #3a86ff19;
+    color: white;
+    font-weight: 500;
+    &:hover {
+      background-color: var(--tagger-primary-color-hover);
+    }
+  }
+
+  &.danger {
+    background-color: var(--tagger-danger-color);
+    border: solid 1.5px darken(wls.$red-500, 2%);
+    color: white;
+    font-weight: 500;
+    &:hover {
+      background-color: var(--tagger-danger-color-hover);
+    }
+  }
 }
 
 //styles
@@ -52,6 +91,12 @@ button.tag {
 	&.basic-box-shadow {
 		box-shadow: 0px 14px 64px rgba(68, 61, 46, 0.05);
 	}
+
+  &.error {
+    color: #ff0000;
+    font-weight: 400;
+    padding: 0.5rem;
+  }
 
 	/* flex */
 	&.flex {
@@ -211,4 +256,15 @@ button.tag {
 	&.fill-width {
 		width: 100%;
 	}
+
+  @for $i from 1 through 12 {
+    &.mt-#{$i} {
+      margin-top: #{$i}px;
+    }
+    &.mb-#{$i} {
+      margin-bottom: #{$i}px;
+    }
+  }
+
+  
 }

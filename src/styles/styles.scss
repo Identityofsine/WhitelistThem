@@ -1,3 +1,15 @@
+toggle-component {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+
 #whitelist-spot {
 	position: absolute;
 	top: -2em;
@@ -24,10 +36,6 @@
 
 #wt-toggle,
 #wt-serializer {
-	background: #fff;
-	padding: .5em;
-	cursor: pointer;
-	transition: .5s opacity;
 	margin-right: .5em;
 	position: relative;
 }
@@ -42,9 +50,4 @@
 
 #wt-add {
 	margin-left: .25em;
-	font-size: 1.5em;
-	background: #fff;
-	padding: .25em;
-	border: 2px solid #000;
-	border-radius: 5px;
 }
