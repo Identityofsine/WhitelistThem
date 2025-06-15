@@ -10,6 +10,8 @@ import { createState, FxState } from "framework/state/state";
 import { ToggleComponent } from "framework/components/ToggleComponent";
 import { SyncPage } from "framework/components/SyncPage";
 import { log } from "util/log/log";
+import { ButtonComponent } from "framework/components/ButtonComponent";
+import { computed } from "framework/state/computed";
 //check if page is still loading
 
 class ChannelCache {
@@ -129,43 +131,6 @@ export class ChromeExtension {
 		});
 	}
 
-	private static async generateTogglePage() {
-		/**
-		const channel_input = tinput("text", "Input Channel JSON Here", "");
-		const flex = tflex(["column", "wrap"], "gap-02", {},
-			th2("Channel Serializer"),
-			channel_input.input,
-			tflex(["column", "align-center"], "gap-01", {},
-				tbutton(() => {
-					const channels = Serializer.importChannels(channel_input.state.state());
-					if (channels) {
-						MessageHandler.send({ type: "set-channels", channels: channels }, () => {
-							ChromeExtension.refreshChannels();
-						});
-					} else {
-						alert("Invalid JSON/ChannelScript");
-					}
-				}, "Submit", "fill-width")
-			),
-			tbutton(() => {
-				const export_string = Serializer.exportChannels(ChromeExtension.allowed_channels);
-				console.log("[serializer] Exporting: %s", export_string);
-				//copy to clipboard
-				navigator.clipboard.writeText(export_string ?? "[]").then(() => {
-					console.log("[serializer] Copied to clipboard");
-				}).catch((err) => {
-					console.error("[serializer] Error: %s (clipboard failed)", err);
-				});
-
-				alert("Channels exported to clipboard");
-
-			}, "Channels to Clipboard", "fill-width"),
-		);
-		const page = t_toggle_page("right-0", {}, flex);
-		return page;
-		*/
-	}
-
 	static async generateSerializerDiv() {
 		return new SyncPage({
 			states: {
@@ -178,6 +143,7 @@ export class ChromeExtension {
 		ChromeExtension.enabled.set(await ChromeExtension.getEnabled());
 
 		const div = new ToggleComponent({
+			tag: "enable-disable-component",
 			state: ChromeExtension.enabled,
 			onClick: () => {
 				const value = ChromeExtension.enabled();
@@ -185,6 +151,7 @@ export class ChromeExtension {
 				ChromeExtension.setEnabled(!value);
 			},
 		});
+		div.elementRef.id = YoutubeSettings.generic.header.buttons.inject.id;
 
 		return div;
 	}
@@ -197,29 +164,32 @@ export class ChromeExtension {
 		const buttons_container = header.querySelector(
 			"#" + YoutubeSettings.generic.header.buttons.id,
 		);
-		const injection_spot = header.querySelector(
+		const injection_spot: HTMLElement | null = header.querySelector(
 			"#" + YoutubeSettings.generic.header.buttons.inject.id,
 		);
+
 		if (!buttons_container || !injection_spot) return;
-		const injection_check = injection_spot.querySelector("toggle-component");
-		if (injection_check) return;
-		const toggle_div = await ChromeExtension.generateToggleDiv();
-		injection_spot.appendChild(toggle_div.elementRef);
-		await this.injectSeralizerButton();
+		const injection_check = injection_spot.querySelectorAll("enable-disable-component");
+		if (injection_check.length > 0) {
+			if (injection_check.length >= 2) {
+				console.warn(
+					"[channel] Too many Header Injections, deleting all but one",
+				);
+				for (let i = 1; i < injection_check.length; i++) {
+					injection_check[i].remove();
+				}
+			}
+			if (!injection_check[0]) return;
+			return;
+		}
+		if (injection_check.length <= 0) {
+			const toggle_div = await ChromeExtension.generateToggleDiv();
+			injection_spot.appendChild(toggle_div.elementRef);
+		};
+		await this.injectSeralizerButton(injection_spot as HTMLElement);
 	}
 
-	async injectSeralizerButton() {
-		const header = document.getElementsByTagName(
-			YoutubeSettings.generic.header.container.tag,
-		)[0];
-		if (!header) return;
-		const buttons_container = header.querySelector(
-			"#" + YoutubeSettings.generic.header.buttons.id,
-		);
-		const injection_spot = header.querySelector(
-			"#" + YoutubeSettings.generic.header.buttons.inject.id,
-		);
-		if (!buttons_container || !injection_spot) return;
+	async injectSeralizerButton(injection_spot: HTMLElement) {
 		const injection_check = injection_spot.querySelector("sync-page");
 		if (injection_check) return;
 		const serializer_div = await ChromeExtension.generateSerializerDiv();
@@ -297,18 +267,14 @@ export class ChromeExtension {
 				}
 			}
 			if (!injection_check[0]) return;
-			await this.refreshChannelInjection(
-				injection_check[0] as HTMLChannelElement,
-				channel_name ?? "",
-			);
 			return;
 		}
 
 		const container = await PageHandler.WaitForElement(() =>
-			document.querySelector(`#` + YoutubeSettings.channel.inject.container.id),
+			document.querySelector(YoutubeSettings.channel.inject.container.tag),
 		);
-		const injection_spot = container.querySelector(
-			"#" + YoutubeSettings.channel.inject.injection_spot.id,
+		const injection_spot: HTMLElement = container.querySelector(
+			YoutubeSettings.channel.inject.injection_spot.tag,
 		);
 
 		if (!injection_spot) {
@@ -316,12 +282,29 @@ export class ChromeExtension {
 			return;
 		}
 
+		injection_spot.style = `${injection_spot.style.cssText} ${YoutubeSettings.channel.inject.injection_spot.inject_styles}`;
+
 		if (!channel_name) {
 			return;
 		}
 
-		//const div = await ChromeExtension.generateAddDiv(channel_name);
-		//injection_spot.appendChild(div);
+		const component = new ButtonComponent({
+			labelSignal: computed(() => `${ChromeExtension?.allowed_channels?.()?.includes(channel_name) ? 'Blacklist' : 'Whitelist'}`),
+			onClick(_) {
+				const isWhitelisted = ChromeExtension?.allowed_channels?.()?.includes(channel_name);
+				log.debug("[channel] Button clicked for channel: %s - (whitelisted:%s)", channel_name, isWhitelisted);
+				if (!isWhitelisted) {
+					MessageHandler.addChannel(channel_name);
+					ChromeExtension.addAllowedChannel(channel_name, () => { });
+				} else {
+					MessageHandler.removeChannel(channel_name);
+					ChromeExtension.removeAllowedChannel(channel_name, () => { });
+				}
+			},
+		})
+
+		component.elementRef.id = YoutubeSettings.channel.inject.injection_spot.inject_id;
+		injection_spot.appendChild(component.elementRef);
 	}
 
 	async deleteShorts() {

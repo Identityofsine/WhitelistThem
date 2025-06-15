@@ -42,17 +42,16 @@ export const YoutubeSettings = {
 	},
 	channel: {
 		channel: {
-			container: "ytd-channel-name",
-			tag: "yt-formatted-string",
+			container: "yt-dynamic-text-view-model",
+			tag: "span",
 		},
 		inject: {
 			container: {
-				tag: "div",
-				id: "inner-header-container",
+				tag: "yt-flexible-actions-view-model",
 			},
 			injection_spot: {
-				tag: "div",
-				id: "buttons",
+				tag: "yt-subscribe-button-view-model",
+				inject_styles: "align-items: center; gap: 8px;",
 				inject_id: "wt-add",
 			},
 		},
@@ -68,6 +67,9 @@ export const YoutubeSettings = {
 				id: "end",
 				inject: {
 					id: "buttons",
+					toggle: {
+						id: "wt-toggle",
+					}
 				},
 			},
 		},
