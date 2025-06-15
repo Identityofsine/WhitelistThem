@@ -7,7 +7,9 @@
 		"build": "node build.js --target=chrome",
 		"watch": "node build.js --target=chrome --watch --debug",
 		"build:firefox": "node build.js --target=firefox",
-		"watch:firefox": "node build.js --target=firefox --watch --debug"
+		"watch:firefox": "node build.js --target=firefox --watch --debug",
+		"package": "npm run build && (cd dist && zip -r ../chrome-extension.zip .)",
+		"package:firefox": "npm run build:firefox && (cd dist && zip -r ../firefox-extension.zip .)"
 	},
 	"repository": {
 		"type": "git",

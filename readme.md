@@ -42,6 +42,39 @@ Every channel (`https://youtube.com/@any`) you visit will be pure and you can wa
 
 ![Channel](./readme-pics/image9.png "Figure 4.0")
 
+# Building 
+
+To build the extension, you will need to have `npm` installed on your computer, along with `typescript`.
+
+```bash
+npm install
+```
+
+After installing the dependencies, you can directly run the build command to compile the TypeScript files into JavaScript (to be used in the browser):
+```bash
+#For Chrome
+npm run build
+#For Firefox
+npm run build:firefox
+```
+
+These will leave you with a `dist` folder that contains the compiled JavaScript files, which can be directly used in the browser through the respective developer mode (debug tools).
+
+### Hot Reloading*
+
+To enable hot reloading (rather hot-compiling) you can run the following command:
+```bash
+#For Chrome
+npm run watch
+#For Firefox
+npm run watch:firefox
+```
+
+The process of loading the extension in the browser will be the same as described in **Building**, but now you can make changes to the TypeScript files and they will be automatically compiled into JavaScript without needing to run the build command again.
+
+
+```bash
+
 
 # Installation
 
