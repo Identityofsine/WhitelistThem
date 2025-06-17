@@ -10,7 +10,7 @@ const TEMPLATE =
 	`
 <div id="wt-serializer">
   <sync-toggle></sync-toggle>
-	<div id="toggle-page" class="sync-page {0 ? open : close} {1 ? already-rendered : not-rendered}">
+	<div id="toggle-page" class="sync-page {0 ? 'open' : 'close'} {1 ? 'already-rendered' : 'not-rendered'}">
 		<div class="tag flex column wrap">
 			<h2 class="tag text-center">Channel Serializer</h2>
 			<channel-list-length-text></channel-list-length-text>
@@ -42,7 +42,6 @@ export class SyncPage extends Component {
 
 	private readonly channelList: FxState<string[]>;
 	private readonly channelListJSON: FxState<string>;
-	private readonly channelListLength: Signal<number>
 
 	private readonly clipboardButtonName: Signal<string> = computed(() => "Copy Channel List to Clipboard");
 	private readonly clearButtonName: Signal<string> = computed(() => "Clear Channel List");
@@ -63,7 +62,6 @@ export class SyncPage extends Component {
 
 		this.channelList = states.channelList;
 		this.channelListJSON = linkedSignal(() => JSON.stringify(this.channelList() ?? [], null, 2));
-		this.channelListLength = computed(() => this.channelList()?.length ?? 0);
 
 		this.channelListJSON.effect((json) => {
 			try {
@@ -125,8 +123,8 @@ export class SyncPage extends Component {
 			if (!this.channelListLengthText) {
 				this.channelListLengthText = new Component<HTMLHeadingElement>({
 					tag: "h3",
-					template: `<h3 class="tag text-center">{0}</h3>`,
-					states: [this.channelListLength]
+					template: `<h3 class="tag text-center">{0.length}</h3>`,
+					states: [this.channelList]
 				});
 			}
 			channelListLength.appendChild(this.channelListLengthText.elementRef);

@@ -1,20 +1,15 @@
-import { Computed } from "framework/state/computed";
-import { createState, FxState, Signal } from "framework/state/state";
+import { createState, Signal } from "framework/state/state";
 import { HTMLActions } from "interfaces/component";
 import { Dispatch } from "interfaces/dispatch";
 import { Identifiable } from "object/abstract/identifiable";
 
-const REGEX_TEMPLATE = /\{\d+(.*?)\}/g;
-const REGEX_TENTATIVE = /\{\d+\s*\?\s*[^:{}]+\s*:\s*[^{}]+\}/;
-const REGEX_TENTATIVE_TRUE = /\?\s*([^:}]+?)\s*:/g;
-const REGEX_TENTATIVE_FALSE = /:\s*([^}]+?)\s*}/g;
-const REGEX_TENTATIVE_REMOVE_SYMBOL = /\{*\?*:*\}*[\s]*/g;
-const REGEX_STATE = /\s*(\d+)/
+const REGEX_EXPRESSION = /\{([^{}]+)\}/g;
 
 export type ComponentProps<T extends HTMLElement = HTMLElement> = {
 	tag?: string;
 	template?: string;
 	states?: Signal<any>[];
+	context?: Record<string, any>;
 	alwaysRender?: boolean;
 	element?: T;
 }
@@ -25,6 +20,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	private initalizedElement: boolean = false;
 	private htmlTemplate: string = ``;
 	protected _states: Signal<any>[] = [];
+	protected _context: Record<string, any> = {};
 	private _events$: Dispatch<void, void>[] = [];
 
 	protected readonly alreadyRendered = createState(false);
@@ -32,6 +28,7 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	constructor(props?: ComponentProps<T>) {
 		const tag = props?.tag ?? 'component';
 		this.element = props?.element ?? document.createElement(tag) as T;
+		this._context = props?.context ?? {};
 		this.setContent(props?.template ?? ``, ...(props?.states ?? []));
 	}
 
@@ -40,8 +37,14 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	}
 
 	/**
-		* html template should be set like the java log4j2 template: <div>{}</div>
-		*/
+	 * Enhanced template system supporting:
+	 * - State references: {0}, {1}, etc.
+	 * - Ternary expressions: {0 ? 'true' : 'false'}
+	 * - Property access: {0.property}, {0.nested.prop}
+	 * - Method calls: {0.method()}, {0.method(arg)}
+	 * - Complex expressions: {0 + 1}, {0 > 5 ? 'big' : 'small'}
+	 * - Context variables: {$contextVar}
+	 */
 	setContent(html: string, ...args: Signal<any>[]) {
 		this.onDestroy();
 		if (args.length > 0) {
@@ -61,35 +64,206 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 	}
 
 	private render() {
-		// Render the component's HTML template
-		// This is a placeholder for actual rendering logic
 		if (this.element) {
-			const htmlTemplateCount = (this.htmlTemplate.match(/{}/g) || []).length;
-			if (htmlTemplateCount !== this._states.length) {
-				//console.error(new Error("[Component] Mismatch between number of placeholders and states provided."));
-			}
-			const needToBeParsed = TemplateParser.parse(this.htmlTemplate);
-			needToBeParsed.forEach((item) => {
-				const stateIndex = item.stateIndex;
-				if (stateIndex >= 0 && stateIndex < this._states.length) {
-					const stateContent = this._states[stateIndex]();
-					if (stateContent !== undefined) {
-						item.updateValue(stateContent);
-					}
-				} else {
-					item.updateValue(``);
+			const expressions = this.parseExpressions(this.htmlTemplate);
+			let newHTML = this.htmlTemplate;
+
+			// Process expressions in reverse order to maintain correct indices
+			for (let i = expressions.length - 1; i >= 0; i--) {
+				const expr = expressions[i];
+				try {
+					const result = this.evaluateExpression(expr.expression);
+					const resultString = result === null || result === undefined ? '' : String(result);
+					newHTML = newHTML.slice(0, expr.start) + resultString + newHTML.slice(expr.end);
+				} catch (error) {
+					console.warn(`[Component] Expression evaluation failed: ${expr.expression}`, error);
+					newHTML = newHTML.slice(0, expr.start) + '' + newHTML.slice(expr.end);
 				}
-			});
-			const newHTML = TemplateParser.rebuild(this.htmlTemplate, needToBeParsed);
+			}
 
 			this.element.innerHTML = newHTML;
 			this.postRender();
-
 		} else {
 			console.warn("Element is not defined, cannot render component.");
 		}
 	}
 
+	private parseExpressions(template: string): Array<{ expression: string, start: number, end: number }> {
+		const expressions: Array<{ expression: string, start: number, end: number }> = [];
+		let match;
+
+		while ((match = REGEX_EXPRESSION.exec(template)) !== null) {
+			expressions.push({
+				expression: match[1].trim(),
+				start: match.index,
+				end: match.index + match[0].length
+			});
+		}
+
+		return expressions;
+	}
+
+	private evaluateExpression(expr: string): any {
+		// Handle context variables (prefixed with $)
+		if (expr.startsWith('$')) {
+			const contextKey = expr.slice(1);
+			return this._context[contextKey];
+		}
+
+		// Create evaluation context
+		const context = {
+			...this._context,
+			// Add state variables as numbered references
+			...this._states.reduce((acc, state, index) => {
+				acc[index.toString()] = state();
+				return acc;
+			}, {} as Record<string, any>)
+		};
+
+		// Enhanced expression evaluator
+		return this.safeEvaluate(expr, context);
+	}
+
+	private safeEvaluate(expr: string, context: Record<string, any>): any {
+		try {
+			// Handle ternary expressions
+			const ternaryMatch = expr.match(/(.+?)\s*\?\s*(.+?)\s*:\s*(.+)/);
+			if (ternaryMatch) {
+				const [, condition, trueValue, falseValue] = ternaryMatch;
+				const conditionResult = this.safeEvaluate(condition.trim(), context);
+				const targetExpr = conditionResult ? trueValue.trim() : falseValue.trim();
+				return this.evaluateSimpleExpression(targetExpr, context);
+			}
+
+			return this.evaluateSimpleExpression(expr, context);
+		} catch (error) {
+			console.warn(`[Component] Expression evaluation error: ${expr}`, error);
+			return '';
+		}
+	}
+
+	private evaluateSimpleExpression(expr: string, context: Record<string, any>): any {
+		// Handle string literals
+		if ((expr.startsWith('"') && expr.endsWith('"')) ||
+			(expr.startsWith("'") && expr.endsWith("'"))) {
+			return expr.slice(1, -1);
+		}
+
+		// Handle simple variable access (including state references)
+		if (Object.prototype.hasOwnProperty.call(context, expr)) {
+			return context[expr];
+		}
+
+		// Handle numbers (only if not found in context)
+		if (/^\d+(\.\d+)?$/.test(expr)) {
+			return parseFloat(expr);
+		}
+
+		// Handle boolean literals
+		if (expr === 'true') return true;
+		if (expr === 'false') return false;
+		if (expr === 'null') return null;
+		if (expr === 'undefined') return undefined;
+
+		// Handle property access and method calls
+		if (expr.includes('.') || expr.includes('(')) {
+			return this.evaluatePropertyAccess(expr, context);
+		}
+
+		// Handle basic arithmetic and comparison
+		if (/[\+\-\*\/\>\<\=\!]/.test(expr)) {
+			return this.evaluateArithmeticExpression(expr, context);
+		}
+
+		// Fallback: return as string
+		return expr;
+	}
+
+	private evaluatePropertyAccess(expr: string, context: Record<string, any>): any {
+		// Handle method calls: obj.method() or obj.method(args)
+		const methodMatch = expr.match(/^(\w+(?:\.\w+)*)\(([^)]*)\)$/);
+		if (methodMatch) {
+			const [, path, argsStr] = methodMatch;
+			const obj = this.resolvePath(path, context);
+			if (typeof obj === 'function') {
+				const args = argsStr ? this.parseArguments(argsStr, context) : [];
+				return obj.apply(this.getParentObject(path, context), args);
+			}
+			return obj;
+		}
+
+		// Handle property access: obj.prop or obj.nested.prop
+		return this.resolvePath(expr, context);
+	}
+
+	private resolvePath(path: string, context: Record<string, any>): any {
+		const parts = path.split('.');
+		let current = context[parts[0]];
+
+		for (let i = 1; i < parts.length; i++) {
+			if (current === null || current === undefined) {
+				return undefined;
+			}
+			current = current[parts[i]];
+		}
+
+		return current;
+	}
+
+	private getParentObject(path: string, context: Record<string, any>): any {
+		const parts = path.split('.');
+		if (parts.length === 1) {
+			return context;
+		}
+
+		let current = context[parts[0]];
+		for (let i = 1; i < parts.length - 1; i++) {
+			if (current === null || current === undefined) {
+				return undefined;
+			}
+			current = current[parts[i]];
+		}
+
+		return current;
+	}
+
+	private parseArguments(argsStr: string, context: Record<string, any>): any[] {
+		if (!argsStr.trim()) return [];
+
+		// Simple argument parsing - could be enhanced for complex nested expressions
+		const args = argsStr.split(',').map(arg => arg.trim());
+		return args.map(arg => this.evaluateSimpleExpression(arg, context));
+	}
+
+	private evaluateArithmeticExpression(expr: string, context: Record<string, any>): any {
+		// Handle simple comparisons and arithmetic
+		const operators = [
+			{ op: '===', fn: (a: any, b: any) => a === b },
+			{ op: '!==', fn: (a: any, b: any) => a !== b },
+			{ op: '==', fn: (a: any, b: any) => a == b },
+			{ op: '!=', fn: (a: any, b: any) => a != b },
+			{ op: '>=', fn: (a: any, b: any) => a >= b },
+			{ op: '<=', fn: (a: any, b: any) => a <= b },
+			{ op: '>', fn: (a: any, b: any) => a > b },
+			{ op: '<', fn: (a: any, b: any) => a < b },
+			{ op: '+', fn: (a: any, b: any) => a + b },
+			{ op: '-', fn: (a: any, b: any) => a - b },
+			{ op: '*', fn: (a: any, b: any) => a * b },
+			{ op: '/', fn: (a: any, b: any) => a / b },
+		];
+
+		for (const { op, fn } of operators) {
+			const parts = expr.split(op);
+			if (parts.length === 2) {
+				const left = this.evaluateSimpleExpression(parts[0].trim(), context);
+				const right = this.evaluateSimpleExpression(parts[1].trim(), context);
+				return fn(left, right);
+			}
+		}
+
+		// If no operator found, try to resolve as variable
+		return context[expr] || expr;
+	}
 
 	// This method is called after the component has been rendered
 	protected postRender(): void {
@@ -103,13 +277,11 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 		} else {
 			console.warn("Element is not defined, cannot post render component.");
 		}
-
 	}
 
 	protected initializeElement(): void {
 		this.alreadyRendered.set(true);
 	}
-
 
 	onClick(listener: Dispatch<Partial<MouseEvent>>): void {
 		if (this.element) {
@@ -159,105 +331,5 @@ export class Component<T extends HTMLElement = HTMLElement> implements HTMLActio
 		} else {
 			console.warn("Element is not defined, cannot attach blur listener.");
 		}
-	}
-
-}
-
-
-class TemplateParsed {
-	readonly id: string = Identifiable.generateUUID();
-	//-1 = no state
-	readonly stateIndex: number = -1;
-	readonly offset: number = 0;
-	private content: string = ``;
-	private length: number = 0;
-	readonly originalLength: number = 0;
-	readonly source: string = ``;
-
-	constructor(content: string, offset: number, source: string, stateIndex: number = -1) {
-		this.content = content;
-		this.offset = offset;
-		this.source = source;
-		this.length = content.length;
-		this.originalLength = content.length;
-		this.stateIndex = stateIndex;
-	}
-
-	private isTentative(): boolean {
-		return REGEX_TENTATIVE.test(this.content);
-	}
-
-	updateValue(value: string) {
-		const isTentative = this.isTentative();
-		if (isTentative) {
-			//set the value to the True or False tentative expression
-			const tentativeTrue = this.content.match(REGEX_TENTATIVE_TRUE)?.find((match) => match !== undefined);
-			const tentativeFalse = this.content.match(REGEX_TENTATIVE_FALSE)?.find((match) => match !== undefined);
-			if (tentativeTrue && tentativeFalse) {
-				if (value) {
-					value = tentativeTrue.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
-				} else {
-					value = tentativeFalse.replace(REGEX_TENTATIVE_REMOVE_SYMBOL, ``);
-				}
-			} else {
-				console.warn(`[TemplateParsed] Tentative expression is not valid: ${this.content}`);
-				return;
-			}
-		}
-		// replace the digit or expression (have a check here) {0} -> value, or {0 ? True : False} -> True or False	
-		const content = this.content.replace(REGEX_TEMPLATE, value);
-		this.setContent(content);
-	}
-
-	setContent(content: string) {
-		this.content = content;
-		this.length = content.length;
-	}
-
-	getContent(): string {
-		return this.content;
-	}
-
-	get lengthValue(): number {
-		return this.length;
-	}
-
-}
-
-class TemplateParser {
-
-	static parse(template: string): TemplateParsed[] {
-		const parsed: TemplateParsed[] = [];
-
-		// state index is in the first number of the template, e.g. {0} or {1}
-		for (const match of template.matchAll(REGEX_TEMPLATE)) {
-			const content = match[0];
-			const offset = match.index || 0;
-			// Extract the state index from the content, e.g. {0} -> 0
-			const stateIndexMatch = content.match(REGEX_STATE);
-			const source = template;
-			const parsedItem = new TemplateParsed(content, offset, source, stateIndexMatch ? parseInt(stateIndexMatch[1], 10) : -1);
-			parsed.push(parsedItem);
-		}
-
-		return parsed;
-	}
-
-	static rebuild(template: string, parsed: TemplateParsed[]): string {
-		let rebuiltTemplate = template;
-		let offsetDelta = 0;
-		parsed.forEach((item) => {
-			const offset = item.offset + offsetDelta;
-			if (item.stateIndex >= 0) {
-				// Replace the placeholder with the content of the state
-				const stateContent = item.getContent();
-				rebuiltTemplate = rebuiltTemplate.slice(0, offset) + stateContent + rebuiltTemplate.slice(offset + item.originalLength);
-				offsetDelta += stateContent.length - item.originalLength;
-			} else {
-				// Just remove the placeholder
-				rebuiltTemplate = rebuiltTemplate.slice(0, offset) + rebuiltTemplate.slice(offset);
-			}
-		});
-		return rebuiltTemplate;
 	}
 } 

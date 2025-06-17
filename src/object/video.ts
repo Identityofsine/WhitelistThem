@@ -47,7 +47,7 @@ export class Video extends Identifiable implements Disposable {
 			tag: "video-toggle-component",
 			template: `
 			<div id="whitelist-spot" class="">
-				<h2>{0 ? + : -}</h2>
+				<h2>{0 ? '+' : '-'}</h2>
 			</div>
 			`,
 			state: disabled,

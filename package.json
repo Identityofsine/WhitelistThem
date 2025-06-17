@@ -5,11 +5,24 @@
 	"main": "index.js",
 	"scripts": {
 		"build": "node build.js --target=chrome",
-		"watch": "node build.js --target=chrome --watch --debug",
+		"build:prod": "node build.js --target=chrome --production",
 		"build:firefox": "node build.js --target=firefox",
+		"build:firefox:prod": "node build.js --target=firefox --production",
+		"watch": "node build.js --target=chrome --watch --debug",
 		"watch:firefox": "node build.js --target=firefox --watch --debug",
-		"package": "npm run build && (cd dist && zip -r ../chrome-extension.zip .)",
-		"package:firefox": "npm run build:firefox && (cd dist && zip -r ../firefox-extension.zip .)"
+		"dev": "npm run watch",
+		"dev:firefox": "npm run watch:firefox",
+		"clean": "node build.js --clean",
+		"package": "npm run build:prod && (cd dist && zip -r ../chrome-extension.zip .)",
+		"package:firefox": "npm run build:firefox:prod && (cd dist && zip -r ../firefox-extension.zip .)",
+		"lint": "eslint src --ext .ts,.tsx,.js",
+		"lint:fix": "eslint src --ext .ts,.tsx,.js --fix",
+		"type-check": "tsc --noEmit",
+		"check": "npm run lint && npm run type-check",
+		"test:build": "npm run check && npm run build",
+		"release": "npm run check && npm run build:prod && npm run package",
+		"release:firefox": "npm run check && npm run build:firefox:prod && npm run package:firefox",
+		"prebuild": "npm run type-check"
 	},
 	"repository": {
 		"type": "git",

@@ -1,20 +1,89 @@
 {
 	"compilerOptions": {
-		"target": "ES2020",
+		"target": "ES2022",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"module": "ESNext",
 		"moduleResolution": "node",
-		"strict": true,
+		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
+		"allowImportingTsExtensions": false,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": false,
+		"useDefineForClassFields": true,
+
+		/* Bundler mode */
+		"moduleDetection": "force",
+		"allowImportingTsExtensions": false,
+		"verbatimModuleSyntax": false,
+		"noEmit": false,
+
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true,
+		"noImplicitOverride": true,
+		"exactOptionalPropertyTypes": true,
+
+		/* Additional Strict Checks */
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": true,
+		"alwaysStrict": true,
+
+		/* Module Resolution */
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"baseUrl": "./src"
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@/components/*": ["framework/components/*"],
+			"@/interfaces/*": ["interfaces/*"],
+			"@/utils/*": ["util/*"],
+			"@/constants/*": ["constants/*"],
+			"@/cache/*": ["cache/*"],
+			"@/objects/*": ["object/*"],
+			"@/handlers/*": ["handler/*"],
+			"@/factory/*": ["factory/*"],
+			"@/error/*": ["error/*"]
+		},
+
+		/* Emit */
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"removeComments": false,
+		"importHelpers": true,
+		"downlevelIteration": true,
+
+		/* Interop Constraints */
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"preserveSymlinks": true,
+		"forceConsistentCasingInFileNames": true,
+
+		/* Type Checking */
+		"skipLibCheck": true
 	},
 	"include": [
 		"src/**/*",
+		"src/**/*.ts",
+		"src/**/*.tsx",
 		"src/globals.d.ts"
 	],
 	"exclude": [
 		"node_modules",
-		"dist"
-	]
+		"dist",
+		"**/*.test.ts",
+		"**/*.spec.ts"
+	],
+	"ts-node": {
+		"esm": true
+	}
 }

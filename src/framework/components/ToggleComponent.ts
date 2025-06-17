@@ -4,7 +4,7 @@ import { ButtonComponent } from "./ButtonComponent";
 import { computed } from "framework/state/computed";
 
 const TEMPLATE =
-	`<div id="wt-toggle" class="wt-toggle {0 ? on : off}">
+	`<div id="wt-toggle" class="wt-toggle {0 ? 'on' : 'off'}">
 		<toggle-button></toggle-button>
 	</div>`
 

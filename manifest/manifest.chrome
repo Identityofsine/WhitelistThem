@@ -18,7 +18,7 @@
 				"*://www.youtube.com/*"
 			],
 			"css": [
-				"./index.css",
+				"./index.css"
 			],
 			"js": [
 				"./index.js"

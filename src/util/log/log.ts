@@ -1,6 +1,6 @@
 
 // this has to be compiled in from esbuild
-const logLevel: 'debug' | 'info' = __LOGLEVEL__;
+const logLevel: 'debug' | 'info' = 'info'; // Default to 'info' level
 
 console.log(`Log level is set to: ${logLevel}`);
 

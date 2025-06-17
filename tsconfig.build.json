@@ -1,0 +1,72 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "target": "ES2020",
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "isolatedModules": false,
+        "noEmit": false,
+        "useDefineForClassFields": true,
+        /* Relaxed Linting */
+        "strict": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noFallthroughCasesInSwitch": false,
+        "noUncheckedIndexedAccess": false,
+        "noImplicitReturns": false,
+        "noImplicitOverride": false,
+        "exactOptionalPropertyTypes": false,
+        /* Relaxed Strict Checks */
+        "noImplicitAny": false,
+        "noImplicitThis": false,
+        "strictNullChecks": false,
+        "strictFunctionTypes": false,
+        "strictBindCallApply": false,
+        "strictPropertyInitialization": false,
+        "alwaysStrict": false,
+        /* Module Resolution */
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "baseUrl": "./src",
+        "paths": {
+            "@/*": [
+                "*"
+            ],
+            "@/components/*": [
+                "framework/components/*"
+            ],
+            "@/interfaces/*": [
+                "interfaces/*"
+            ],
+            "@/utils/*": [
+                "util/*"
+            ],
+            "@/constants/*": [
+                "constants/*"
+            ],
+            "@/cache/*": [
+                "cache/*"
+            ],
+            "@/objects/*": [
+                "object/*"
+            ],
+            "@/handlers/*": [
+                "handler/*"
+            ],
+            "@/factory/*": [
+                "factory/*"
+            ],
+            "@/error/*": [
+                "error/*"
+            ]
+        }
+    }
+}

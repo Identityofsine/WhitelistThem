@@ -1,0 +1,37 @@
+{
+	"typescript.preferences.quoteStyle": "single",
+	"typescript.preferences.includePackageJsonAutoImports": "auto",
+	"typescript.suggest.includeAutomaticOptionalChainCompletions": true,
+	"typescript.suggest.includeCompletionsForImportStatements": true,
+	"typescript.suggest.autoImports": true,
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"typescript.preferences.importModuleSpecifier": "relative",
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit",
+		"source.organizeImports": "explicit"
+	},
+	"eslint.validate": [
+		"typescript",
+		"typescriptreact",
+		"javascript",
+		"javascriptreact"
+	],
+	"eslint.format.enable": true,
+	"files.associations": {
+		"*.scss": "scss"
+	},
+	"emmet.includeLanguages": {
+		"typescript": "html"
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/*.zip": true
+	},
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/*.zip": true
+	}
+} 
